@@ -7,7 +7,7 @@ struct PermutationInvariantKernel <: KernelFunctions.Kernel
 end
 
 #TODO: accept composed functions as base kernels
-#TODO: This doesn't work with Zygote autograd
+#TODO: Currently doesn't work with Zygote autograd
 function (k::PermutationInvariantKernel)(x, y)
     x_permutations = permutations(x, length(x))
     y_permutations = permutations(y, length(y))
