@@ -60,55 +60,9 @@ end
 
 Given the GP model, maximise the given acquisition function using multi-start optimisation
 """
-# function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bounds::Vector{Tuple{Float64,Float64}}, n_restarts::Int)
-
-
-#     lower_bounds = [b[1] for b in bounds]
-#     upper_bounds = [b[2] for b in bounds]
-
-#     # Multistart optimisation
-#     start_points = QuasiMonteCarlo.sample(n_restarts, lower_bounds, upper_bounds, LatinHypercubeSample())
-#     # Threads.@threads for k in 1:n_restarts
-#     for k in 1:n_restarts
-#         # Enforce bounds on elements of x0
-#         x0 = [
-#             bounded(start_points[:, k][i], lower_bounds[i], upper_bounds[i])
-#             for i in eachindex(lower_bounds)
-#         ]
-#         # "_transformed" is values transformed into an unbounded space, "_untransformed" is the values in the original bounded space
-#         x0_transformed, untransform = value_flatten(x0)
-
-
-#         function objective(x_untransformed)
-#             return -acqf(posterior_gp, x_untransformed)
-#         end
-
-#         # Maximise the acquisition function by minimising its negative
-#         result = optimize(
-#             objective ∘ untransform,
-#             # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)), # Permutation invariant GP is not differentiable
-#             x0_transformed,
-#             inplace=false,
-#             BFGS(
-#                 alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
-#                 linesearch=Optim.LineSearches.BackTracking(),
-#             ),
-#         )
-
-#         candidate_xs[k] = untransform(result.minimizer)
-#         candidate_ys[k] = result.minimum
-#     end
-
-#     # println("candidate_xs = ", candidate_xs)
-#     # println("candidate_ys = ", candidate_ys)
-
-#     # Return the best x
-#     _, i = findmax(candidate_ys)
-#     return candidate_xs[i]
-# end
 function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bounds::Vector{Tuple{Float64,Float64}}, n_restarts::Int)
-    candidate_x = nothing
-    candidate_y = nothing
+    candidate_x = Vector{Vector{Float64}}(undef, n_restarts)
+    candidate_y = Vector{Float64}(undef, n_restarts)
 
     # Multistart optimisation
     lower_bounds = [b[1] for b in bounds]
@@ -118,8 +72,8 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
         for x0 in eachcol(QuasiMonteCarlo.sample(n_restarts, lower_bounds, upper_bounds, LatinHypercubeSample()))
     ]
 
-    for k in 1:n_restarts
-        x0_transformed, untransform = value_flatten(start_points[k])
+    Threads.@threads for i in 1:n_restarts
+        x0_transformed, untransform = value_flatten(start_points[i])
 
         function objective(x_untransformed)
             return -acqf(posterior_gp, x_untransformed)
@@ -129,24 +83,15 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
         # TODO: This often fails due to Cholesky / not p.d.
         result = optimize(
             objective ∘ untransform,
-            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)),
+            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)), # PermutationInvariantKernel is not compatible with Zygote autodiff
             x0_transformed,
-            BFGS(
-                alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
-                linesearch=Optim.LineSearches.BackTracking(),
-            ),
             inplace=false,
         )
 
-        # If this is the first iteration, or if the result is better than the previous best, save it
-        if isnothing(candidate_x) || result.minimum < candidate_y
-            candidate_x = untransform(result.minimizer)
-            candidate_y = result.minimum
-        end
-
-        #TODO: Add a stopping criterion
+        candidate_x[i] = untransform(result.minimizer)
+        candidate_y[i] = -result.minimum # Objective was to minimise the negative of the acquisition function, so flip the sign back
     end
 
     # Return the best x
-    return candidate_x
+    return candidate_x[argmax(candidate_y)]
 end
