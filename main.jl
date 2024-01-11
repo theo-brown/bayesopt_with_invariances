@@ -2,6 +2,7 @@ using ArgParse
 using Plots
 using Random
 using Distributions
+using HDF5
 
 include("gp_utils.jl")
 include("invariant_gps.jl")
@@ -119,8 +120,8 @@ end
 
 # Define the GPs we're comparing
 gp_builders = Dict(
-    "Standard" => build_matern52_gp,
-    "Permutation invariant" => build_permutationinvariantmatern52_gp
+    "standard" => build_matern52_gp,
+    "permutation_invariant" => build_permutationinvariantmatern52_gp
 )
 
 # Make the output directory
@@ -133,6 +134,7 @@ simple_regret_figure = plot(
     legend=:outertopright,
     size=(800, 600),
 )
+
 
 # Plot the simple regret for each GP
 for (label, builder) in gp_builders
@@ -168,7 +170,7 @@ for (label, builder) in gp_builders
         x_next = maximise_acqf(gp, acqf, bounds, args["n_restarts"])
         observed_x[t] = x_next
         observed_y[t] = f_noisy(x_next)
-        println("[$label] ($t/$(args["n_steps"])): ", observed_x[t], " -> ", observed_y[t])
+        println("[$label] ($(t-1)/$(args["n_steps"])): ", observed_x[t], " -> ", observed_y[t])
 
         # Update the GP
         gp = get_posterior_gp(builder, observed_x[1:t], observed_y[1:t], θ_0; optimise_hyperparameters=true)
@@ -191,6 +193,14 @@ for (label, builder) in gp_builders
         simple_regret,
         label=label,
     )
+
+    # Save the data
+    h5open(joinpath(args["output"], "data.h5"), "cw") do output_file
+        create_group(output_file, label)
+        output_file[label]["observed_x"] = stack(observed_x; dims=1)
+        output_file[label]["observed_y"] = observed_y
+        output_file[label]["simple_regret"] = simple_regret
+    end
 end
 
 # Save the plot
