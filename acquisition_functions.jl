@@ -19,8 +19,7 @@ function mvr(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64})::Float64
     x_vec = [x]
 
     # Compute the variance of the GP posterior at x
-    # Add jitter to improve stability
-    σ2 = var(posterior_gp(x_vec, 1e-6))
+    σ2 = var(posterior_gp(x_vec))
 
     # var is a Vector{Float64}, but we only want a single Float64
     return only(σ2)
@@ -43,7 +42,7 @@ function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64})::Float64
     x_vec = [x]
 
     # Compute the mean and variance of the GP posterior at x
-    finite_gp = posterior_gp(x_vec, 1e-6)
+    finite_gp = posterior_gp(x_vec)
     σ2 = only(var(finite_gp))
     μ = only(mean(finite_gp))
 

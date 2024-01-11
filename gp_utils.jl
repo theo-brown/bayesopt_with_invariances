@@ -25,7 +25,7 @@ function maximise_mll(gp_builder_function::Function, θ_0::NamedTuple, x::Vector
     # Objective: negative marginal log-likelihood
     function nmll(θ::NamedTuple)
         gp = gp_builder_function(θ)
-        return -logpdf(gp(x, θ.σ_n^2), y)
+        return -logpdf(gp(x, θ.σ_n^2 + 1e-6), y) # Add jitter
     end
 
     result = optimize(
@@ -63,6 +63,6 @@ function get_posterior_gp(gp_builder_function::Function, x_train::Vector{Vector{
         θ_opt = θ_0
     end
     gp = gp_builder_function(θ_opt)
-    posterior_gp = posterior(gp(x_train, θ_opt.σ_n^2), y_train)
+    posterior_gp = posterior(gp(x_train, θ_opt.σ_n^2 + 1e-6), y_train)
     return posterior_gp
 end

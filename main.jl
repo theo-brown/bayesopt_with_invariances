@@ -3,21 +3,26 @@ using Plots
 using Random
 using Distributions
 
-include("ackley.jl")
-include("acquisition_functions.jl")
 include("gp_utils.jl")
 include("invariant_gps.jl")
+include("acquisition_functions.jl")
+include("plot_utils.jl")
+
+include("ackley.jl")
+include("kernel_objective_function.jl")
 
 
 # Parse command line arguments
 settings = ArgParseSettings()
 
+supported_functions = ["ackley", "matern"]
+
 @add_arg_table settings begin
     "function"
-    help = "Function to maximise (supports: ackley). Note that the ackley function is multiplied by -1, so that it is a maximisation task."
+    help = "Function to maximise (supports: $supported_functions). Note that these functions are transformed so that if they were originally designed as minimisation tasks, they are multiplied by -1 to make them a maximisation task."
     arg_type = String
-    default = "ackley"
-    range_tester = (x -> x in ["ackley"])
+    default = "matern"
+    range_tester = (x -> x in supported_functions)
     required = true
 
     "acqf"
@@ -38,9 +43,9 @@ settings = ArgParseSettings()
     default = 2
 
     "--noise_variance"
-    help = "Noise variance"
+    help = "Variance of Gaussian noise for noisy function value observations"
     arg_type = Float64
-    default = 1e-3
+    default = 0.0
 
     "--n_steps"
     help = "Number of steps to run the optimisation for"
@@ -53,9 +58,9 @@ settings = ArgParseSettings()
     default = 64
 
     "--output"
-    help = "Filename to save the plot to"
+    help = "Directory to save the plots to"
     arg_type = String
-    default = "plot.png"
+    default = "output"
 end
 
 args = parse_args(settings)
@@ -64,15 +69,44 @@ args = parse_args(settings)
 Random.seed!(args["seed"])
 
 # Define the function to optimise
-noise = Normal(0, sqrt(args["noise_variance"]))
 if args["function"] == "ackley"
     f = x -> -ackley(x)
     bounds = [(-5.0, 5.0) for _ in 1:args["dimension"]]
-    maximum = 0.0
+    f_maximum = 0.0
+    f_maximiser = [0.0 for _ in 1:args["dimension"]]
+elseif args["function"] == "matern"
+    if args["dimension"] != 2
+        error("Symmetric Matern52 function only supports dimension=2")
+    end
+    bounds = [(0.0, 1.0) for i in 1:2]
+    θ_true = (
+        l=0.2,
+        σ_f=1.0,
+        σ_n=0.1,
+    )
+    f = build_latent_function(build_permutationinvariantmatern52_gp, θ_true, 64, bounds, 22)
+
+    # Find the maximum
+    x0 = bounded.([0.79, 0.38], [b[1] for b in bounds], [b[2] for b in bounds]) # Start near the true maximum
+    x0_transformed, untransform = value_flatten(x0)
+    result = optimize(
+        x_transformed -> -f(untransform(x_transformed)),
+        x0_transformed,
+        inplace=false,
+    )
+    f_maximum = -result.minimum
+    f_maximiser = untransform(result.minimizer)
 else
     error("Unsupported function: $args['function']")
 end
-f_noisy(x) = f(x) + rand(noise)
+
+# Define the noisy function observation protocol
+if args["noise_variance"] > 0.0
+    noise = Normal(0.0, sqrt(args["noise_variance"]))
+    f_noisy = x -> f(x) + rand(noise)
+else
+    f_noisy = f
+end
 
 # Define the acquisition function
 if args["acqf"] == "ucb"
@@ -89,8 +123,11 @@ gp_builders = Dict(
     "Permutation invariant" => build_permutationinvariantmatern52_gp
 )
 
+# Make the output directory
+mkdir(args["output"])
+
 # Create the plot canvas
-figure = plot(
+simple_regret_figure = plot(
     xlabel="Iteration",
     ylabel="Simple regret",
     legend=:outertopright,
@@ -99,6 +136,9 @@ figure = plot(
 
 # Plot the simple regret for each GP
 for (label, builder) in gp_builders
+    # Make an output directory for this GP
+    mkdir(joinpath(args["output"], label))
+
     # Preallocate arrays for the samples
     observed_x = Vector{Vector{Float64}}(undef, 1 + args["n_steps"])
     observed_y = Vector{Float64}(undef, 1 + args["n_steps"])
@@ -108,9 +148,9 @@ for (label, builder) in gp_builders
     observed_x[1] = [
         rand(Uniform(lower, upper))
         for (lower, upper) in bounds
-    ] #TODO: tidy up
+    ]
     observed_y[1] = f_noisy(observed_x[1])
-    simple_regret[1] = abs(observed_y[1])
+    simple_regret[1] = abs(f_maximum - observed_y[1])
 
     # Prior on the GP hyperparameters
     θ_0 = (
@@ -123,36 +163,35 @@ for (label, builder) in gp_builders
     gp = get_posterior_gp(builder, observed_x[1:1], observed_y[1:1], θ_0; optimise_hyperparameters=true)
 
     # Run the optimisation
-    for t in 1:args["n_steps"]
+    for t in 2:args["n_steps"]+1
         # Maximise the acquisition function
         x_next = maximise_acqf(gp, acqf, bounds, args["n_restarts"])
-
-        # Evaluate the function at the new point
-        y_next = f_noisy(x_next)
-
-        println("Queried x=$(x_next), got y=$(y_next) ")
+        observed_x[t] = x_next
+        observed_y[t] = f_noisy(x_next)
+        println("[$label] ($t/$(args["n_steps"])): ", observed_x[t], " -> ", observed_y[t])
 
         # Update the GP
-        observed_x[t+1] = x_next
-        observed_y[t+1] = y_next
-        gp = get_posterior_gp(builder, observed_x[1:1+t], observed_y[1:1+t], θ_0; optimise_hyperparameters=true)
-
-        # Report the best observation so far
-        reported_y, i = findmax(observed_y[1:1+t])
+        gp = get_posterior_gp(builder, observed_x[1:t], observed_y[1:t], θ_0; optimise_hyperparameters=true)
 
         # Compute the simple regret
-        simple_regret[t+1] = abs(maximum - reported_y)
-        println("[$label] r($t) = $(simple_regret[t+1])")
+        simple_regret[t] = abs(f_maximum - maximum(observed_y[1:t]))
+        println("Regret: $(simple_regret[t])")
+
+        # Plot the GP
+        if args["dimension"] == 2
+            plot_2d_gp_with_observations(gp, observed_x[1:t], bounds)
+            savefig(joinpath(args["output"], label, "$t.png"))
+        end
     end
 
     # Plot the simple regret
-    plot!(
-        figure,
-        collect(1:args["n_steps"]+1),
+    Plots.plot!(
+        simple_regret_figure,
+        collect(0:args["n_steps"]),
         simple_regret,
         label=label,
     )
 end
 
 # Save the plot
-savefig(figure, args["output"])
+savefig(simple_regret_figure, joinpath(args["output"], "simple_regret.png"))
