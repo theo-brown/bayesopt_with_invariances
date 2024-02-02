@@ -1,6 +1,6 @@
-using AbstractGPs
-using Optim, Zygote, ParameterHandling
-using Random, Distributions, QuasiMonteCarlo
+using AbstractGPs # For general GP functionality
+using Optim, Zygote, ParameterHandling # For optimisation
+using Random, Distributions, QuasiMonteCarlo # For generating spatial samples
 
 """
     mvr(posterior_gp, x)
@@ -15,34 +15,30 @@ Compute the uncertainty of a GP posterior at a point x.
 - `Float64`: The uncertainty of the GP posterior at x.
 """
 function mvr(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64})::Float64
-    # Expand the input point to a vector of vectors, to make it compatible with the GP
-    x_vec = [x]
-
     # Compute the variance of the GP posterior at x
-    σ2 = var(posterior_gp(x_vec))
+    # Note that posterior_gp expects a vector of inputs, so we need to wrap x in a vector
+    σ2 = var(posterior_gp([x]))
 
     # var is a Vector{Float64}, but we only want a single Float64
     return only(σ2)
 end
 
 """
-    ucb(posterior_gp, x)
+    ucb(posterior_gp, x, β)
 
 Compute the upper confidence bound of a GP posterior at a point x.
 
 # Arguments
 - `posterior_gp::AbstractGPs.AbstractGP`: A GP posterior.
 - `x::Vector{Float64}`: A single point at which to compute the upper confidence bound.
-
+- `β`::Float64: The hyperparameter that determines the explore/exploite tradeoff
 # Returns
 - `Float64`: The upper confidence bound of the GP posterior at x.
 """
-function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64})::Float64
-    # Expand the input point to a vector of vectors, to make it compatible with the GP
-    x_vec = [x]
-
+function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64}; β::Float64=2.0)::Float64
     # Compute the mean and variance of the GP posterior at x
-    finite_gp = posterior_gp(x_vec)
+    # Note that posterior_gp expects a vector of inputs, so we need to wrap x in a vector
+    finite_gp = posterior_gp([x])
     σ2 = only(var(finite_gp))
     μ = only(mean(finite_gp))
 
@@ -51,7 +47,7 @@ function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64})::Float64
         return μ
     end
 
-    return μ + 2 * sqrt(σ2)
+    return μ + β * sqrt(σ2)
 end
 
 """
@@ -82,7 +78,7 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
         # TODO: This often fails due to Cholesky / not p.d.
         result = optimize(
             objective ∘ untransform,
-            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)), # PermutationInvariantKernel is not compatible with Zygote autodiff
+            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)), # TODO: We might've fixed this so that our kernels can be differentiable
             x0_transformed,
             inplace=false,
         )

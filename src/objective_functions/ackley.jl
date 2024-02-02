@@ -14,3 +14,6 @@ function ackley(x::Vector{Float64})
     n = length(x)
     return 20 + exp(1) - 20 * exp(-0.2 * sqrt(sum(x .^ 2) / n)) - exp(sum(cos.(2 * pi * x)) / n)
 end
+
+ackley_maximum = 0.0
+ackley_maximiser(d::Int) = zeros(d)
