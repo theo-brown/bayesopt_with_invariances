@@ -33,12 +33,6 @@ function symmetrise(f::Function, G::Vector{Function})
     return 1 / length(G) * sum([f ∘ σ for σ ∈ G])
 end
 
-function symmetrise(k::KernelFunctions.Kernel, G::Vector{Function})
-    # Need to convert σ ∈ G into a KernelFunctions.Transform object
-    # Then we can use the ∘ operator to compose the kernel with the transformation
-    return 1 / (length(G)^2) * sum([k ∘ FunctionTransform(σ) for σ in G])
-end
-
 """
     permutation_group(d)
 
@@ -46,7 +40,21 @@ Generate the permutation group in d dimensions.
 """
 function permutation_group(d::Int)::Vector{Function}
     indices = collect(1:d)
-    return [x -> x[σ] for σ in permutations(indices)]
+    return [x -> x[p] for p in permutations(indices)]
+end
+
+"""
+    SymmetrisedKernel(k, G)
+
+Create a symmetrised kernel from a kernel `k` and a group `G`.
+"""
+struct SymmetrisedKernel <: Kernel
+    k::Kernel
+    G::Vector{Function}
+end
+
+function (kₛ::SymmetrisedKernel)(x, y)
+    return 1 / length(kₛ.G) * sum([kₛ.k(σ(x), y) for σ ∈ kₛ.G])
 end
 
 ;

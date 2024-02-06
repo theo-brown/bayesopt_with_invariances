@@ -2,6 +2,8 @@ using AbstractGPs # For general GP functionality
 using ParameterHandling, Optim # For fitting GPs
 using Random, Distributions # For generating spatial samples
 
+include("symmetrisation.jl")
+
 """
     maximise_mll(gp_builder_function, θ_0, x, y)
 
@@ -77,5 +79,20 @@ Build a Matern 5/2 GP with the given hyperparameters.
 """
 function build_matern52_gp(θ::NamedTuple)::AbstractGPs.AbstractGP
     kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
+    return GP(kernel)
+end
+
+"""
+    build_permutationinvariantmatern52_gp(θ::NamedTuple, d::Int)
+
+Build a permutation-invariant GP with the given hyperparameters.
+
+# Arguments
+- `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
+- `d::Int`: The dimensionality of the input space.
+"""
+function build_permutationinvariantmatern52_gp(θ::NamedTuple, d::Int)::AbstractGPs.AbstractGP
+    base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
+    kernel = SymmetrisedKernel(base_kernel, permutation_group(d))
     return GP(kernel)
 end
