@@ -10,7 +10,7 @@ function run_bayesopt(
     gp_builder::Function,
     acquisition_function::Function,
     θ_0::NamedTuple;
-    optimise_hyperparameters::bool=true,
+    optimise_hyperparameters::Bool=true,
 )
     # Create the output arrays
     d = length(input_bounds)
