@@ -31,18 +31,16 @@ function build_latent_function(gp_builder_function::Function, θ::NamedTuple, n_
 
     # Observe values of a random sample from the GP evaluated at the sample locations
     # We do this to ensure that the resulting function can be represented by the GP
-    # Fit with no noise, because this is the "ground truth" generative process
-    y = rand(dummy_rng, base_gp(x, 0))
+    y = rand(dummy_rng, base_gp(x, θ.σ_n^2 + 1e-6))
 
-    # Condition the GP on the values at those points
-    # Again, no noise, because this is the "ground truth" generative process
-    true_gp = posterior(base_gp(x, 0), y)
+    # Condition the GP on the values at those points, treating them as noiseless observations
+    true_gp = posterior(base_gp(x, 1e-6), y)
 
     # Define the latent function
     # Again, no noise, because this is the "ground truth" generative process
     # If you want to add noise, create an additional function that adds noise to the output of this function
     function f(x::Vector{Vector{Float64}})::Vector{Float64}
-        return mean(true_gp(x, 0))
+        return mean(true_gp(x, 1e-6))
     end
     f(x::Vector{Float64}) = only(f([x]))
 
