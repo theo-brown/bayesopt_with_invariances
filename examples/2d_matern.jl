@@ -3,10 +3,10 @@ using Random
 using Plots, LaTeXStrings
 using HDF5
 
-include("../gp_utils.jl")
-include("../objective_functions/kernel_objective_function.jl")
-include("../bayesopt.jl")
-include("../symmetrisation.jl")
+include("../src/gp_utils.jl")
+include("../src/objective_functions/kernel_objective_function.jl")
+include("../src/bayesopt.jl")
+include("../src/symmetrisation.jl")
 
 ################
 # 0. Arguments #
