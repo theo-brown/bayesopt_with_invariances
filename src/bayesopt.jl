@@ -38,7 +38,7 @@ function run_bayesopt(
         x_next = maximise_acqf(gp, acquisition_function, bounds, 256)
         observed_x[i+1, :] = x_next
         observed_y[i+1] = f(x_next)
-        println("[$i/$n_steps]: ", observed_x[i], " -> ", observed_y[i])
+        println("[$i/$n_steps]: ", observed_x[i, :], " -> ", observed_y[i])
     end
 
     return observed_x, observed_y
