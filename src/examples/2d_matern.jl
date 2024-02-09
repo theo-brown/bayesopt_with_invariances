@@ -32,6 +32,10 @@ s = ArgParseSettings()
     "--beta"
     arg_type = Float64
     default = 2.0
+
+    "--latent_function_seed"
+    arg_type = Int
+    default = 1
 end
 args = parse_args(s)
 
@@ -61,16 +65,15 @@ function build_2d_invariant_matern52_gp(θ)
     return build_permutationinvariantmatern52_gp(θ, d)
 end
 
-# We use a fixed seed to get the same function every time
-latent_function_seed = 1
 # Generate a latent function by evaluating a symmetric Matern-5/2 GP at a grid of points
+# We use a fixed seed to get the same function every time
 latent_function_n_points = 64
 f = build_latent_function(
     build_2d_invariant_matern52_gp,
     θ,
     latent_function_n_points,
     bounds,
-    latent_function_seed
+    args["latent_function_seed"]
 )
 # Define a noisy version of the function
 f_noisy(x) = f(x) + randn() * θ.σ_n
@@ -133,7 +136,7 @@ h5open(output_file, "w") do file
     attrs(file)["n_iterations"] = args["n_iterations"]
     attrs(file)["seed"] = args["seed"]
     attrs(file)["target_function"] = "Permutation invariant Matern-5/2 GP on [0, 1]^2"
-    attrs(file)["latent_function_seed"] = latent_function_seed
+    attrs(file)["latent_function_seed"] = args["latent_function_seed"]
     attrs(file)["latent_function_n_points"] = latent_function_n_points
     attrs(file)["acquisition_function"] = "UCB"
     attrs(file)["beta"] = args["beta"]
