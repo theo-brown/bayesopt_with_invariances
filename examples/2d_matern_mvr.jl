@@ -168,11 +168,15 @@ h5open(output_file, "w") do file
             # MVR's reporting rule is max posterior mean 
             reported_x = Matrix{Float64}(undef, args["n_iterations"], 2)
             reported_f = Vector{Float64}(undef, args["n_iterations"])
-            gp = gp_builder(θ)
             for j in 1:args["n_iterations"]
                 # Generate the GP posterior based on the observations to date
-                finite_gp = gp(observed_x[1:j, :], θ.σ_n^2)
-                gp_posterior = finite_gp(observed_x[1:j, :], observed_y[1:j])
+                gp_posterior = get_posterior_gp(
+                    gp_builder,
+                    observed_x[1:j, :],
+                    observed_y[1:j],
+                    θ;
+                    optimise_hyperparameters=false
+                )
 
                 # Function to minimise
                 function target(x)
