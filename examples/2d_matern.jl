@@ -67,7 +67,7 @@ end
 
 # Generate a latent function by evaluating a symmetric Matern-5/2 GP at a grid of points
 # We use a fixed seed to get the same function every time
-latent_function_n_points = 64
+latent_function_n_points = 128
 f = build_latent_function(
     build_2d_invariant_matern52_gp,
     θ,
@@ -128,7 +128,6 @@ savefig(joinpath(args["output_dir"], "figures", "target_function.pdf"))
 # 2. Bayesian optimisation #
 ############################
 output_file = joinpath(args["output_dir"], "results.h5")
-acquisition_function = (gp, x) -> ucb(gp, x; β=args["beta"])
 
 h5open(output_file, "w") do file
     # Save metadata
@@ -161,15 +160,17 @@ h5open(output_file, "w") do file
                 bounds,
                 args["n_iterations"],
                 gp_builder,
-                acquisition_function,
+                (gp, x) -> ucb(gp, x; β=args["beta"]),
                 θ;
                 optimise_hyperparameters=false
             )
+            true_y = f([collect(xᵢ) for xᵢ in eachrow(observed_x)])
 
             # Create a group for this repeat
             repeat_group = create_group(gp_group, string(i))
             write_dataset(repeat_group, "observed_x", observed_x)
             write_dataset(repeat_group, "observed_y", observed_y)
+            write_dataset(repeat_group, "true_y", true_y) # We have to do this extra collect because f is defined to only take Vector{Vector{Float64}}, rather than AbstractVector
         end
     end
 end
@@ -191,10 +192,10 @@ h5open(output_file, "r") do file
         for i in 1:n_repeats
             repeat_group = gp_group[string(i)]
             observed_x = read_dataset(repeat_group, "observed_x")
-            true_y = f([collect(xᵢ) for xᵢ in eachrow(observed_x)]) # We have to do this extra collect because f is defined to only take Vector{Vector{Float64}}, rather than AbstractVector
+            true_y = read_dataset(repeat_group, "true_y")
 
             for j in 1:n_iterations
-                simple_regret[i, j] = y_opt - maximum(true_y[1:j])
+                simple_regret[i, j] = y_opt - true_y[j]
             end
         end
 
