@@ -67,7 +67,7 @@ end
 
 # Generate a latent function by evaluating a symmetric Matern-5/2 GP at a grid of points
 # We use a fixed seed to get the same function every time
-latent_function_n_points = 64
+latent_function_n_points = 128
 f = build_latent_function(
     build_2d_invariant_matern52_gp,
     θ,
@@ -128,7 +128,6 @@ savefig(joinpath(args["output_dir"], "figures", "target_function.pdf"))
 # 2. Bayesian optimisation #
 ############################
 output_file = joinpath(args["output_dir"], "results.h5")
-acquisition_function = mvr
 
 h5open(output_file, "w") do file
     # Save metadata
@@ -160,15 +159,47 @@ h5open(output_file, "w") do file
                 bounds,
                 args["n_iterations"],
                 gp_builder,
-                acquisition_function,
+                mvr,
                 θ;
                 optimise_hyperparameters=false
             )
+
+            # Generate the reported values 
+            # MVR's reporting rule is max posterior mean 
+            reported_x = Matrix{Float64}(undef, args["n_iterations"], 2)
+            reported_f = Vector{Float64}(undef, args["n_iterations"])
+            gp = gp_builder(θ)
+            for j in 1:args["n_iterations"]
+                # Generate the GP posterior based on the observations to date
+                finite_gp = gp(observed_x[1:j, :], θ.σ_n^2)
+                gp_posterior = finite_gp(observed_x[1:j, :], observed_y[1:j])
+
+                # Function to minimise
+                function target(x)
+                    return -mean(gp_posterior(x))
+                end
+                # Start at our best guess
+                maximiser_guess = observed_x[argmax(observed_y), :]
+                # Bound it using ParameterHandling.jl
+                x0 = [
+                    bounded(maximiser_guess[1], bounds[1][1], bounds[1][2]),
+                    bounded(maximiser_guess[2], bounds[2][1], bounds[2][2]),
+                ]
+                x0_flat, unflatten = value_flatten(x0)
+                # Minimise the target
+                result = optimize(target ∘ unflatten, x0_flat, LBFGS())
+
+                # Store the reported value
+                reported_x[j, :] = unflatten(Optim.minimizer(result))
+                reported_f[j] = f(reported_x[j, :])
+            end
 
             # Create a group for this repeat
             repeat_group = create_group(gp_group, string(i))
             write_dataset(repeat_group, "observed_x", observed_x)
             write_dataset(repeat_group, "observed_y", observed_y)
+            write_dataset(repeat_group, "reported_x", reported_x)
+            write_dataset(repeat_group, "reported_f", reported_f)
         end
     end
 end
@@ -177,8 +208,8 @@ end
 ###################
 # 3. Regret plots #
 ###################
-println("Plotting simple regret...")
-figure = plot(legend=:topright, xlabel="Iteration", ylabel="Simple regret")
+println("Plotting cumulative regret...")
+figure = plot(legend=:topright, xlabel="Iteration", ylabel="Cumulative regret")
 h5open(output_file, "r") do file
     n_repeats = attrs(file)["n_repeats"]
     n_iterations = attrs(file)["n_iterations"]
@@ -190,28 +221,33 @@ h5open(output_file, "r") do file
         for i in 1:n_repeats
             repeat_group = gp_group[string(i)]
             observed_x = read_dataset(repeat_group, "observed_x")
-            true_y = f([collect(xᵢ) for xᵢ in eachrow(observed_x)]) # We have to do this extra collect because f is defined to only take Vector{Vector{Float64}}, rather than AbstractVector
-            # TODO: could use a different reporting rule; original paper uses max posterior mean
+            true_y = read_dataset(repeat_group, "true_y")
+
             for j in 1:n_iterations
-                simple_regret[i, j] = y_opt - maximum(true_y[1:j])
+                simple_regret[i, j] = y_opt - true_y[j]
             end
         end
+
+        # Convert to cumulative regret
+        cumulative_regret = cumsum(simple_regret, dims=2)
+        mean_cumulative_regret = vec(mean(cumulative_regret, dims=1))
+        var_cumulative_regret = vec(var(cumulative_regret, dims=1))
 
         # Plot the simple regret with error bars
         plot!(
             1:n_iterations,
-            vec(mean(simple_regret, dims=1)),
-            ribbon=2 * vec(std(simple_regret, dims=1)),
+            mean_cumulative_regret,
+            ribbon=2 * sqrt.(var_cumulative_regret),
             fillalpha=0.1,
             label=group_name == "permutation_invariant" ? L"$k_G$" : L"$k$",
             xlabel="Iteration",
-            ylabel="Simple regret",
+            ylabel="Cumulative regret",
             legend=:bottomright,
             xlims=(1, n_iterations),
         )
     end
 end
-savefig(joinpath(args["output_dir"], "figures", "simple_regret.pdf"))
+savefig(joinpath(args["output_dir"], "figures", "cumulative_regret.pdf"))
 
 
 #######################
@@ -222,6 +258,7 @@ println("Visualising GP predictions...")
 h5open(output_file, "r") do file
     n_repeats = attrs(file)["n_repeats"]
     n_iterations = attrs(file)["n_iterations"]
+    β = attrs(file)["beta"]
     for group_name in ["permutation_invariant", "standard"]
         gp_group = file[group_name]
 
@@ -288,7 +325,7 @@ h5open(output_file, "r") do file
                 # Plot the GP and acquisition functions
                 μ_figure = plot_with_observations(μ, "Mean")
                 σ²_figure = plot_with_observations(σ², "Variance")
-                gp_figure = plot(μ_figure, σ²_figure, layout=(1, 3), size=(900, 300))
+                gp_figure = plot(μ_figure, σ²_figure, layout=(1, 2), size=(600, 300))
                 savefig(
                     joinpath(
                         args["output_dir"],
