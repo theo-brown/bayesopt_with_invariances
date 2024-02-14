@@ -210,8 +210,8 @@ end
 ###################
 # 3. Regret plots #
 ###################
-println("Plotting cumulative regret...")
-figure = plot(legend=:topright, xlabel="Iteration", ylabel="Cumulative regret")
+println("Plotting simple regret...")
+figure = plot(legend=:topright, xlabel="Iteration", ylabel="Simple regret")
 h5open(output_file, "r") do file
     n_repeats = attrs(file)["n_repeats"]
     n_iterations = attrs(file)["n_iterations"]
@@ -241,13 +241,13 @@ h5open(output_file, "r") do file
             fillalpha=0.1,
             label=group_name == "permutation_invariant" ? L"$k_G$" : L"$k$",
             xlabel="Iteration",
-            ylabel="Cumulative regret",
+            ylabel="Simple regret",
             legend=:bottomright,
             xlims=(1, n_iterations),
         )
     end
 end
-savefig(joinpath(args["output_dir"], "figures", "cumulative_regret.pdf"))
+savefig(joinpath(args["output_dir"], "figures", "simple_regret.pdf"))
 
 
 #######################
