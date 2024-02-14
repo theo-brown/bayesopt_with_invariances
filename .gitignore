@@ -1,3 +1,7 @@
 old/
 .vscode/
 *.png
+
+batch_scripts/*.out
+
+examples/data
