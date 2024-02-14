@@ -210,8 +210,8 @@ end
 ###################
 # 3. Regret plots #
 ###################
-println("Plotting simple regret...")
-figure = plot(legend=:topright, xlabel="Iteration", ylabel="Simple regret")
+println("Plotting cumulative regret...")
+figure = plot(legend=:topright, xlabel="Iteration", ylabel="Cumulative regret")
 h5open(output_file, "r") do file
     n_repeats = attrs(file)["n_repeats"]
     n_iterations = attrs(file)["n_iterations"]
@@ -241,99 +241,99 @@ h5open(output_file, "r") do file
             fillalpha=0.1,
             label=group_name == "permutation_invariant" ? L"$k_G$" : L"$k$",
             xlabel="Iteration",
-            ylabel="Simple regret",
+            ylabel="Cumulative regret",
             legend=:bottomright,
             xlims=(1, n_iterations),
         )
     end
 end
-savefig(joinpath(args["output_dir"], "figures", "simple_regret.pdf"))
+savefig(joinpath(args["output_dir"], "figures", "cumulative_regret.pdf"))
 
 
 #######################
 # 4. GP visualisation #
 #######################
-# println("Visualising GP predictions...")
+println("Visualising GP predictions...")
 
-# h5open(output_file, "r") do file
-#     n_repeats = attrs(file)["n_repeats"]
-#     n_iterations = attrs(file)["n_iterations"]
-#     for group_name in ["permutation_invariant", "standard"]
-#         gp_group = file[group_name]
+h5open(output_file, "r") do file
+    n_repeats = attrs(file)["n_repeats"]
+    n_iterations = attrs(file)["n_iterations"]
+    for group_name in ["permutation_invariant", "standard"]
+        gp_group = file[group_name]
 
-#         gp_builder = group_name == "permutation_invariant" ? build_2d_invariant_matern52_gp : build_matern52_gp
+        gp_builder = group_name == "permutation_invariant" ? build_2d_invariant_matern52_gp : build_matern52_gp
 
-#         for i in 1:n_repeats
-#             repeat_group = gp_group[string(i)]
-#             observed_x = read_dataset(repeat_group, "observed_x")
-#             observed_y = read_dataset(repeat_group, "observed_y")
-#             for j in 1:n_iterations
-#                 println("($group_name) repeat [$i / $n_repeats] iteration [$j / $n_iterations]")
+        for i in 1:n_repeats
+            repeat_group = gp_group[string(i)]
+            observed_x = read_dataset(repeat_group, "observed_x")
+            observed_y = read_dataset(repeat_group, "observed_y")
+            for j in 1:n_iterations
+                println("($group_name) repeat [$i / $n_repeats] iteration [$j / $n_iterations]")
 
-#                 x = eachrow(observed_x[1:j, :])
-#                 y = observed_y[1:j]
+                x = eachrow(observed_x[1:j, :])
+                y = observed_y[1:j]
 
-#                 # Fit a GP to the observed data
-#                 gp = get_posterior_gp(gp_builder, x, y, θ; optimise_hyperparameters=false)
+                # Fit a GP to the observed data
+                gp = get_posterior_gp(gp_builder, x, y, θ; optimise_hyperparameters=false)
 
-#                 # Evaluate on a grid
-#                 x_range = range(0.0, 1.0, length=100)
-#                 x_grid = [[x₁, x₂] for x₁ in x_range, x₂ in x_range]
-#                 gpx = gp([x_grid[i] for i in eachindex(x_grid)], 1e-6)
-#                 μ = mean(gpx)
-#                 σ² = var(gpx)
+                # Evaluate on a grid
+                x_range = range(0.0, 1.0, length=100)
+                x_grid = [[x₁, x₂] for x₁ in x_range, x₂ in x_range]
+                gpx = gp([x_grid[i] for i in eachindex(x_grid)], 1e-6)
+                μ = mean(gpx)
+                σ² = var(gpx)
 
-#                 function plot_with_observations(z, title)
-#                     figure = contourf(
-#                         x_range,
-#                         x_range,
-#                         reshape(z, length(x_range), length(x_range)),
-#                         levels=32,
-#                         color=:viridis,
-#                         cbar=false,
-#                     )
-#                     scatter!(
-#                         [xᵢ[1] for xᵢ in x],
-#                         [xᵢ[2] for xᵢ in x],
-#                         seriestype=:scatter,
-#                         color=:white,
-#                         label="Observations",
-#                         markersize=3,
-#                     )
-#                     scatter!(
-#                         [x[end][1]],
-#                         [x[end][2]],
-#                         marker=:star,
-#                         markersize=10,
-#                         color=:red,
-#                         label="Last observation"
-#                     )
-#                     plot!(
-#                         legend=false,
-#                         title=title,
-#                         xlabel=L"$x_1$",
-#                         ylabel=L"$x_2$",
-#                         size=(300, 300),
-#                         aspect_ratio=:equal,
-#                         xlims=(0, 1),
-#                         ylims=(0, 1),
-#                     )
-#                     return figure
-#                 end
+                function plot_with_observations(z, title)
+                    figure = contourf(
+                        x_range,
+                        x_range,
+                        reshape(z, length(x_range), length(x_range)),
+                        levels=32,
+                        color=:viridis,
+                        cbar=false,
+                    )
+                    scatter!(
+                        [xᵢ[1] for xᵢ in x],
+                        [xᵢ[2] for xᵢ in x],
+                        seriestype=:scatter,
+                        color=:white,
+                        label="Observations",
+                        markersize=3,
+                    )
+                    scatter!(
+                        [x[end][1]],
+                        [x[end][2]],
+                        marker=:star,
+                        markersize=10,
+                        color=:red,
+                        label="Last observation"
+                    )
+                    plot!(
+                        legend=false,
+                        title=title,
+                        xlabel=L"$x_1$",
+                        ylabel=L"$x_2$",
+                        size=(300, 300),
+                        aspect_ratio=:equal,
+                        xlims=(0, 1),
+                        ylims=(0, 1),
+                    )
+                    return figure
+                end
 
-#                 # Plot the GP and acquisition functions
-#                 μ_figure = plot_with_observations(μ, "Mean")
-#                 σ²_figure = plot_with_observations(σ², "Variance")
-#                 gp_figure = plot(μ_figure, σ²_figure, layout=(1, 2), size=(600, 300))
-#                 savefig(
-#                     joinpath(
-#                         args["output_dir"],
-#                         "figures",
-#                         "gp_visualisation",
-#                         "$(group_name)_repeat_$(i)_iteration_$(j).png", # Save as PNG because it's easier to flick through
-#                     )
-#                 )
-#             end
-#         end
-#     end
-# end
+                # Plot the GP and acquisition functions
+                μ_figure = plot_with_observations(μ, "Mean")
+                σ²_figure = plot_with_observations(σ², "Variance")
+                gp_figure = plot(μ_figure, σ²_figure, layout=(1, 2), size=(600, 300))
+                savefig(
+                    joinpath(
+                        args["output_dir"],
+                        "figures",
+                        "gp_visualisation",
+                        "$(group_name)_repeat_$(i)_iteration_$(j).png", # Save as PNG because it's easier to flick through
+                    )
+                )
+            end
+        end
+    end
+end

@@ -67,7 +67,7 @@ end
 
 # Generate a latent function by evaluating a symmetric Matern-5/2 GP at a grid of points
 # We use a fixed seed to get the same function every time
-latent_function_n_points = 64
+latent_function_n_points = 128
 f = build_latent_function(
     build_2d_invariant_matern52_gp,
     θ,
@@ -128,7 +128,6 @@ savefig(joinpath(args["output_dir"], "figures", "target_function.pdf"))
 # 2. Bayesian optimisation #
 ############################
 output_file = joinpath(args["output_dir"], "results.h5")
-acquisition_function = (gp, x) -> ucb(gp, x; β=args["beta"])
 
 h5open(output_file, "w") do file
     # Save metadata
@@ -161,7 +160,7 @@ h5open(output_file, "w") do file
                 bounds,
                 args["n_iterations"],
                 gp_builder,
-                acquisition_function,
+                (gp, x) -> ucb(gp, x; β=args["beta"]),
                 θ;
                 optimise_hyperparameters=false
             )
@@ -196,7 +195,7 @@ h5open(output_file, "r") do file
             true_y = read_dataset(repeat_group, "true_y")
 
             for j in 1:n_iterations
-                simple_regret[i, j] = y_opt - maximum(true_y[1:j])
+                simple_regret[i, j] = y_opt - true_y[j]
             end
         end
 
