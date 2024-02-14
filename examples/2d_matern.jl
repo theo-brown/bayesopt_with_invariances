@@ -165,11 +165,13 @@ h5open(output_file, "w") do file
                 θ;
                 optimise_hyperparameters=false
             )
+            true_y = f([collect(xᵢ) for xᵢ in eachrow(observed_x)]) # We have to do this extra collect because f is defined to only take Vector{Vector{Float64}}, rather than AbstractVector
 
             # Create a group for this repeat
             repeat_group = create_group(gp_group, string(i))
             write_dataset(repeat_group, "observed_x", observed_x)
             write_dataset(repeat_group, "observed_y", observed_y)
+            write_dataset(repeat_group, "true_y", true_y)
         end
     end
 end
@@ -191,7 +193,7 @@ h5open(output_file, "r") do file
         for i in 1:n_repeats
             repeat_group = gp_group[string(i)]
             observed_x = read_dataset(repeat_group, "observed_x")
-            true_y = f([collect(xᵢ) for xᵢ in eachrow(observed_x)]) # We have to do this extra collect because f is defined to only take Vector{Vector{Float64}}, rather than AbstractVector
+            true_y = read_dataset(repeat_group, "true_y")
 
             for j in 1:n_iterations
                 simple_regret[i, j] = y_opt - maximum(true_y[1:j])
