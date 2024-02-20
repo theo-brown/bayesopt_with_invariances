@@ -2,6 +2,7 @@ using AbstractGPs # For general GP functionality
 using Optim, Zygote, ParameterHandling # For optimisation
 using Random, Distributions, QuasiMonteCarlo # For generating spatial samples
 
+
 """
     mvr(posterior_gp, x)
 
@@ -31,11 +32,11 @@ Compute the upper confidence bound of a GP posterior at a point x.
 # Arguments
 - `posterior_gp::AbstractGPs.AbstractGP`: A GP posterior.
 - `x::Vector{Float64}`: A single point at which to compute the upper confidence bound.
-- `β`::Float64: The hyperparameter that determines the explore/exploite tradeoff
+- `beta`::Float64: The hyperparameter that determines the explore/exploite tradeoff
 # Returns
 - `Float64`: The upper confidence bound of the GP posterior at x.
 """
-function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64}; β::Float64=2.0)::Float64
+function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64}; beta::Float64=2.0)::Float64
     # Compute the mean and variance of the GP posterior at x
     # Note that posterior_gp expects a vector of inputs, so we need to wrap x in a vector
     finite_gp = posterior_gp([x])
@@ -47,8 +48,9 @@ function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64}; β::Float
         return μ
     end
 
-    return μ + sqrt(β) * sqrt(σ²)
+    return μ + sqrt(beta) * sqrt(σ²)
 end
+
 
 """
     maximise_acqf(posterior_gp, acqf, bounds, n_restarts)

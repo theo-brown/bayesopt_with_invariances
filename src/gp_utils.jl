@@ -2,7 +2,9 @@ using AbstractGPs # For general GP functionality
 using ParameterHandling, Optim # For fitting GPs
 using Random, Distributions # For generating spatial samples
 
-include("symmetrisation.jl")
+include("invariant_kernels.jl")
+include("transformation_groups.jl")
+
 
 """
     maximise_mll(gp_builder_function, θ_0, x, y)
@@ -43,6 +45,7 @@ function maximise_mll(gp_builder_function::Function, θ_0::NamedTuple, x::Abstra
     return unflatten(result.minimizer)
 end
 
+
 """
     get_posterior_gp(gp_builder_function, x_train, y_train, θ_0; optimise_hyperparameters=true)
 
@@ -69,6 +72,7 @@ function get_posterior_gp(gp_builder_function::Function, x_train::AbstractVector
     return posterior_gp
 end
 
+
 """
     build_matern52_gp(θ::NamedTuple)
 
@@ -82,17 +86,18 @@ function build_matern52_gp(θ::NamedTuple)::AbstractGPs.AbstractGP
     return GP(kernel)
 end
 
-"""
-    build_permutationinvariantmatern52_gp(θ::NamedTuple, d::Int)
 
-Build a permutation-invariant GP with the given hyperparameters.
+"""
+    build_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function})
+
+Build a GP with the given hyperparameters that is invariant under the action of the transformations in G.
 
 # Arguments
 - `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `d::Int`: The dimensionality of the input space.
+- `G::Vector{Function}`: A collection of transformations.
 """
-function build_permutationinvariantmatern52_gp(θ::NamedTuple, d::Int)::AbstractGPs.AbstractGP
+function build_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function})
     base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
-    kernel = SymmetrisedKernel(base_kernel, permutation_group(d))
+    kernel = GroupInvariantKernel(base_kernel, G)
     return GP(kernel)
 end

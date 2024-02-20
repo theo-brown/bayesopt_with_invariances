@@ -22,25 +22,26 @@ function build_latent_function(gp_builder_function::Function, θ::NamedTuple, n_
     # Create a GP with the specified architecture and hyperparameters
     base_gp = gp_builder_function(θ)
 
-    # Reseed the RNG every time, to ensure we get the same function
-    dummy_rng = MersenneTwister(seed)
+    # Create a custom RNG that is specific to this scope
+    rng = MersenneTwister(seed)
 
     # Generate the sample points
     distribution = [Uniform(lower, upper) for (lower, upper) in bounds]
-    x = [rand.(dummy_rng, distribution) for _ in 1:n_points]
+    x = [rand.(rng, distribution) for _ in 1:n_points]
+
+    # Evaluate the GP at the points 
+    finite_gp = base_gp(x, θ.σ_n^2 + 1e-6)
 
     # Observe values of a random sample from the GP evaluated at the sample locations
     # We do this to ensure that the resulting function can be represented by the GP
-    y = rand(dummy_rng, base_gp(x, θ.σ_n^2 + 1e-6))
+    y = rand(rng, finite_gp)
 
-    # Condition the GP on the values at those points, treating them as noiseless observations
-    true_gp = posterior(base_gp(x, 1e-6), y)
+    # Condition the GP on the values at those points
+    true_gp = posterior(finite_gp, y)
 
     # Define the latent function
-    # Again, no noise, because this is the "ground truth" generative process
-    # If you want to add noise, create an additional function that adds noise to the output of this function
     function f(x::Vector{Vector{Float64}})::Vector{Float64}
-        return mean(true_gp(x, 1e-6))
+        return mean(true_gp(x, θ.σ_n^2 + 1e-6))
     end
     f(x::Vector{Float64}) = only(f([x]))
 

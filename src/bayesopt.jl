@@ -1,4 +1,4 @@
-using Random
+using Random # For generation of the initial point
 include("acquisition.jl")
 include("gp_utils.jl")
 
@@ -9,13 +9,17 @@ function run_bayesopt(
     n_steps::Int,
     gp_builder::Function,
     acquisition_function::Function,
+    reporting_function::Function,
     θ_0::NamedTuple;
     optimise_hyperparameters::Bool=true,
+    n_restarts::Int=256,
 )
     # Create the output arrays
     d = length(input_bounds)
     observed_x = Matrix{Float64}(undef, n_steps, d)
     observed_y = Vector{Float64}(undef, n_steps)
+    reported_x = Matrix{Float64}(undef, n_steps, d)
+    reported_y = Vector{Float64}(undef, n_steps)
 
     # Initial sample
     observed_x[1, :] = [
@@ -35,11 +39,14 @@ function run_bayesopt(
         )
 
         # Generate the next observation
-        x_next = maximise_acqf(gp, acquisition_function, bounds, 256)
+        x_next = maximise_acqf(gp, acquisition_function, bounds, n_restarts)
         observed_x[i+1, :] = x_next
         observed_y[i+1] = f(x_next)
-        println("[$i/$n_steps]: ", observed_x[i, :], " -> ", observed_y[i])
+
+        # Report
+        reported_x[i+1, :] = reporting_function(gp, observed_x[1:i+1, :], observed_y[1:i+1], bounds)
+        reported_y[i+1] = f(reported_x[i+1, :])
     end
 
-    return observed_x, observed_y
+    return observed_x, observed_y, reported_x, reported_y
 end
