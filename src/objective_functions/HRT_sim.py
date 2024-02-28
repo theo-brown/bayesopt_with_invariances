@@ -1,6 +1,5 @@
 import numpy as np
 from typing import List
-from tqdm import tqdm
 from collections import deque
 
 
@@ -20,7 +19,7 @@ class HRTSim:
     def __call__(self, permutation: List):
         hrt = 0
         self._populate_cache(permutation)
-        for symbol in tqdm(self.plog):
+        for symbol in self.plog:
             if symbol in self.tcm:
                 continue
             elif symbol in self.l1:
