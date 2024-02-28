@@ -16,7 +16,7 @@ class HRTSim:
         self.symbol_list = list(set(self.plog))
         self._setup()
 
-    def __call__(self, permutation: List):
+    def __call__(self, permutation: np.ndarray):
         hrt = 0
         self._populate_cache(permutation)
         for symbol in self.plog:
