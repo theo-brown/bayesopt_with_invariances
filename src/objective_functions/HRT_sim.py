@@ -1,6 +1,8 @@
 import numpy as np
 from typing import List
 from tqdm import tqdm
+from collections import deque
+
 
 class HRTSim:
     def __init__(self, plog:List, tcm_size:int, l1_size:List, timescale:float, l1_latency:float, ram_latency:float) -> None:
@@ -35,46 +37,38 @@ class HRTSim:
         self._empty_cache()
 
     def _update_symbol_usage(self, symbol):
-        for item in self.l1:
-            self.symbol_usage_map[item] -= 1
-        self.symbol_usage_map[symbol] += 1
+        self.LRU_deque.remove(symbol)
+        self.LRU_deque.append(symbol)
 
     def _execute_eviction_policy(self, symbol):
         # Type: Least Recently Used
-        self.LRU_symbol = min(self.symbol_usage_map, key= self.symbol_usage_map.get)
-        #print(self.LRU_symbol)
-        #print(np.where(self.l1 == self.LRU_symbol))
-        self.LRU_symbol_index = int(np.where(self.l1 == self.LRU_symbol)[0])
-        evicted_symbol = self.l1[self.LRU_symbol_index]
+        evicted_symbol = self.LRU_deque.popleft()
+        self.LRU_deque.append(symbol)
 
-        ram_symbol_index = int(np.where(self.ram == symbol)[0])
-        self.ram[ram_symbol_index] = evicted_symbol
-        self.l1[self.LRU_symbol_index] = symbol
+        self.l1[self.l1.index(evicted_symbol)] = symbol
 
-        self.symbol_usage_map[symbol] = 0
-        self.symbol_usage_map[evicted_symbol] = 1
-
+        self.ram.remove(symbol)
+        self.ram.append(evicted_symbol)
 
     def _populate_cache(self, permutation):
         symbol_iter = iter(permutation)
         try:
             for i in range(self.tcm_size):
-                self.tcm[i] = next(symbol_iter)
+                self.tcm.append(next(symbol_iter))
             for i in range(self.l1_size):
-                self.l1[i] = next(symbol_iter)
+                self.l1.append(next(symbol_iter))
             for i in range(int(1e6)):
-                self.ram[i] = next(symbol_iter)
+                self.ram.append(next(symbol_iter))
         except StopIteration:
             pass
-        for item in self.l1:
-            self.symbol_usage_map[item] = 0
+
+        self.LRU_deque=deque(self.l1)
     
     def _empty_cache(self):
-        self.tcm = np.empty(self.tcm_size, dtype=object)
-        self.l1 = np.empty(self.l1_size, dtype=object)
-        self.ram = np.empty(int(1e6), dtype=object)
-        self.LRU_symbol = None
-        self.symbol_usage_map = {k:1 for k in self.symbol_list}
+        self.tcm =  deque([], maxlen=self.tcm_size) 
+        self.l1 = deque([], maxlen=self.l1_size)
+        self.ram = deque([], maxlen=int(1e6)) 
+        self.LRU_deque = deque([])
         
 
 if __name__ == "__main__":
