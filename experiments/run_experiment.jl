@@ -35,6 +35,7 @@ function run_experiment(
     output_file = joinpath(output_directory, "results.h5")
 
     # Define the target function
+    println("Generating target function...")
     f = build_latent_function(
         invariant_gp_builder,
         θ,
@@ -45,6 +46,7 @@ function run_experiment(
     f_noisy(x) = f(x) + randn() * θ.σ_n
     render(f, bounds; output_filename=joinpath(output_directory, "latent_function"))
 
+    println("Finding approximate maximum...")
     x_opt, f_opt = get_approximate_maximum(f, bounds)
 
     # Regret plot setup
@@ -75,9 +77,11 @@ function run_experiment(
 
     # Run experiment
     for (gp_builder, label) in [
-        (vanilla_gp_builder, "standard"),
+        (vanilla_gp_builder, "Standard"),
         (invariant_gp_builder, invariant_gp_label),
     ]
+        println("Running BO with $label kernel...")
+
         h5open(output_file, "r+") do file
             create_group(file, label)
         end
@@ -85,7 +89,7 @@ function run_experiment(
         regret = zeros(n_repeats, n_iterations)
 
         for i in 1:n_repeats
-            println("# Repeat $i")
+            println("Repeat $i/$n_repeats")
 
             # Set seed
             Random.seed!(seed + i)
@@ -109,6 +113,8 @@ function run_experiment(
             # Compute the regret
             regret[i, :] = regret_function(f_opt, observed_f)
 
+            println("Final regret: $(regret[i, end])")
+
             # Save data to file
             h5open(output_file, "r+") do file
                 file["$label/$i/observed_x"] = observed_x
@@ -131,5 +137,7 @@ function run_experiment(
     end
 
     # Save the regret plot
-    savefig(figure, joinpath(output_directory, "regret_plot.pdf"))
+    regret_plot_path = joinpath(output_directory, "regret_plot")
+    savefig(figure, "$regret_plot_path.pdf")
+    savefig(figure, "$regret_plot_path.png")    
 end
