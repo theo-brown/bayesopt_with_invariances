@@ -4,22 +4,26 @@ seed = 42
 d = 2
 bounds = [(0.0, 1.0) for _ in 1:d]
 output_directory = "data/experiment_1_mvr"
-n_iterations = 32
+n_iterations = 256
 n_repeats = 16
 acquisition_function = mvr
 acquisition_function_label = "MVR"
 reporting_function = maximum_observed_posterior_mean
 reporting_function_label = "Maximum observed posterior mean"
-vanilla_gp_builder = build_matern52_gp
-invariant_gp_builder(θ) = build_invariantmatern52_gp(θ, permutation_group(d))
-invariant_gp_label = "Permutation invariant"
+gp_builders = Dict(
+    [
+        ("Standard", build_matern52_gp),
+        ("Permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d)))
+    ]
+)
+target_gp_builder = gp_builders["Permutation invariant"]
+target_function_seed = 43
+target_function_n_points = 128
 θ = (
     l=0.12,
     σ_f=1.0,
     σ_n=0.1,
 )
-latent_function_seed = 18
-latent_function_n_points = 128
 
 run_experiment(
     seed,
@@ -31,10 +35,9 @@ run_experiment(
     acquisition_function_label,
     reporting_function,
     reporting_function_label,
-    vanilla_gp_builder,
-    invariant_gp_builder,
-    invariant_gp_label,
+    gp_builders,
+    target_gp_builder,
+    target_function_seed,
+    target_function_n_points,
     θ,
-    latent_function_seed,
-    latent_function_n_points,
 )

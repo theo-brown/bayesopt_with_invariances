@@ -1,10 +1,10 @@
 include("run_experiment.jl")
 
 seed = 42
-d = 2
+d = 3
 bounds = [(0.0, 1.0) for _ in 1:d]
-output_directory = "data/experiment_1_ucb"
-n_iterations = 256
+output_directory = "data/experiment_2_ucb"
+n_iterations = 512
 n_repeats = 16
 β = 12.0
 acquisition_function(gp, x) = ucb(gp, x; beta=β)
@@ -14,11 +14,11 @@ reporting_function_label = "Latest point"
 gp_builders = Dict(
     [
         ("Standard", build_matern52_gp),
-        ("Permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d)))
+        ("Cyclic invariant", θ -> build_invariantmatern52_gp(θ, cyclic_group(d)))
     ]
 )
-target_gp_builder = gp_builders["Permutation invariant"]
-target_function_seed = 43
+target_gp_builder = gp_builders["Cyclic invariant"]
+target_function_seed = 20
 target_function_n_points = 128
 θ = (
     l=0.12,
