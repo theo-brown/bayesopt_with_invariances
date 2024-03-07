@@ -111,9 +111,10 @@ function run_experiment(
             reported_f = f([collect(xᵢ) for xᵢ in eachrow(reported_x)])
 
             # Compute the regret
-            regret[i, :] = regret_function(f_opt, observed_f)
+            regret[i, :] = regret_function(f_opt, reported_f)
 
             println("Final regret: $(regret[i, end])")
+            flush(stdout)
 
             # Save data to file
             h5open(output_file, "r+") do file
@@ -139,5 +140,5 @@ function run_experiment(
     # Save the regret plot
     regret_plot_path = joinpath(output_directory, "regret_plot")
     savefig(figure, "$regret_plot_path.pdf")
-    savefig(figure, "$regret_plot_path.png")    
+    savefig(figure, "$regret_plot_path.png")
 end
