@@ -11,12 +11,10 @@ acquisition_function(gp, x) = ucb(gp, x; beta=β)
 acquisition_function_label = "UCB, β=$β"
 reporting_function = latest_point
 reporting_function_label = "Latest point"
-gp_builders = Dict(
-    [
-        ("Standard", build_matern52_gp),
-        ("Cyclic invariant", θ -> build_invariantmatern52_gp(θ, cyclic_group(d)))
-    ]
-)
+gp_builders = Dict([
+    ("Standard", build_matern52_gp),
+    ("Cyclic invariant", θ -> build_invariantmatern52_gp(θ, cyclic_group(d)))
+])
 target_gp_builder = gp_builders["Cyclic invariant"]
 target_function_seed = 20
 target_function_n_points = 128

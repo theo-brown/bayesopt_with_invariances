@@ -11,12 +11,10 @@ acquisition_function(gp, x) = ucb(gp, x; beta=β)
 acquisition_function_label = "UCB, β=$β"
 reporting_function = latest_point
 reporting_function_label = "Latest point"
-gp_builders = Dict(
-    [
-        ("Standard", build_matern52_gp),
-        ("Permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d)))
-    ]
-)
+gp_builders = Dict([
+    ("Standard", build_matern52_gp),
+    ("Permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d)))
+])
 target_gp_builder = gp_builders["Permutation invariant"]
 target_function_seed = 43
 target_function_n_points = 128
