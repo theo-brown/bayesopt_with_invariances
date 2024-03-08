@@ -22,7 +22,7 @@ function run_experiment(
     acquisition_function_label::String,
     reporting_function::Function,
     reporting_function_label::String,
-    gp_builders::Dict{String, Function},
+    gp_builders::Dict{String,Function},
     target_gp_builder::Function,
     target_function_seed::Int,
     target_function_n_points::Int,
@@ -35,6 +35,7 @@ function run_experiment(
 
     # Define the target function
     println("Generating target function...")
+    flush(stdout)
     f = build_latent_function(
         target_gp_builder,
         θ,
@@ -46,6 +47,7 @@ function run_experiment(
     render(f, bounds; output_filename=joinpath(output_directory, "latent_function"))
 
     println("Finding approximate maximum...")
+    flush(stdout)
     x_opt, f_opt = get_approximate_maximum(f, bounds)
 
     # Regret plot setup
@@ -75,7 +77,7 @@ function run_experiment(
     end
 
     # Run experiment
-    for (gp_builder, label) in gp_builders
+    for (label, gp_builder) in gp_builders
         println("Running BO with $label kernel...")
 
         h5open(output_file, "r+") do file
@@ -86,6 +88,7 @@ function run_experiment(
 
         for i in 1:n_repeats
             println("Repeat $i/$n_repeats")
+            flush(stdout)
 
             # Set seed
             Random.seed!(seed + i)
