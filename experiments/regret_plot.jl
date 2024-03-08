@@ -87,6 +87,8 @@ function plot_with_ribbon(
     trace_label::String,
     yaxis_label::String;
     output_filename::String="",
+    ylims::Union{Tuple{Float64,Float64},Nothing}=nothing,
+    xlims::Union{Tuple{Float64,Float64},Nothing}=nothing,
 )
     μ = vec(mean(y, dims=1))
     σ² = vec(var(y, dims=1))
@@ -99,8 +101,16 @@ function plot_with_ribbon(
         label=trace_label,
         xlabel="Number of evaluations",
         ylabel=yaxis_label,
-        xlims=(1, length(μ)),
     )
+    if isnothing(xlims)
+        Plots.plot!(xlims=(1, length(μ)))
+    else
+        Plots.plot!(xlims=xlims)
+    end
+    if !isnothing(ylims)
+        Plots.plot!(ylims=ylims)
+    end
+
     if output_filename != ""
         savefig(output_filename)
     end
@@ -114,6 +124,8 @@ function plot_with_ribbon!(
     trace_label::String,
     yaxis_label::String;
     output_filename::String="",
+    ylims::Union{Tuple{Float64,Float64},Nothing}=nothing,
+    xlims::Union{Tuple{Float64,Float64},Nothing}=nothing,
 )
     μ = vec(mean(y, dims=1))
     σ² = vec(var(y, dims=1))
@@ -126,8 +138,15 @@ function plot_with_ribbon!(
         label=trace_label,
         xlabel="Number of evaluations",
         ylabel=yaxis_label,
-        xlims=(1, length(μ)),
     )
+    if isnothing(xlims)
+        Plots.plot!(xlims=(1, length(μ)))
+    else
+        Plots.plot!(xlims=xlims)
+    end
+    if !isnothing(ylims)
+        Plots.plot!(ylims=ylims)
+    end
     if output_filename != ""
         savefig(output_filename)
     end
