@@ -21,5 +21,11 @@ end
 function (k::GroupInvariantKernel)(x, y)
     G = k.transformation_group
     κ = k.base_kernel
-    return 1 / length(G) * sum([κ(σ(x), y) for σ in G])
+    # Incremental sum
+    K = 0
+    for σ in G
+        K = K .+ κ(σ(x), y)
+    end
+    K = K ./ length(G)
+    return K
 end
