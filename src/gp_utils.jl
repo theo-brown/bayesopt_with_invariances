@@ -101,3 +101,20 @@ function build_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function})
     kernel = GroupInvariantKernel(base_kernel, G)
     return GP(kernel)
 end
+
+
+"""
+    build_approx_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function}, W::Integer)
+
+Build a GP with the given hyperparameters using the random subgroup approximation to an invariant kernel.
+
+# Arguments
+- `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
+- `G::Vector{Function}`: A collection of transformations.
+- `W::Integer`: The size of the random subgroup.
+"""
+function build_approx_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function}, W::Integer)
+    base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
+    kernel = RandomSubgroupInvariantKernel(base_kernel, G, W)
+    return GP(kernel)
+end
