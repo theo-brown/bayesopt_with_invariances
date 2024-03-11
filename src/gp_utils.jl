@@ -115,6 +115,7 @@ Build a GP with the given hyperparameters using the random subgroup approximatio
 """
 function build_approx_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function}, W::Integer)
     base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
-    kernel = RandomSubgroupInvariantKernel(base_kernel, G, W)
+    subgroup = sample(G, W; replace=false)
+    kernel = GroupInvariantKernel(base_kernel, subgroup)
     return GP(kernel)
 end
