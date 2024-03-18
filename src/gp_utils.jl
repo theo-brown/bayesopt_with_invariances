@@ -3,7 +3,7 @@ using ParameterHandling, Optim # For fitting GPs
 using Random, Distributions # For generating spatial samples
 
 include("invariant_kernels.jl")
-include("transformation_groups.jl")
+include("permutation_groups.jl")
 
 
 """
@@ -88,34 +88,16 @@ end
 
 
 """
-    build_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function})
+    build_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{PermutationGroupElement})
 
-Build a GP with the given hyperparameters that is invariant under the action of the transformations in G.
-
-# Arguments
-- `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `G::Vector{Function}`: A collection of transformations.
-"""
-function build_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function})
-    base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
-    kernel = GroupInvariantKernel(base_kernel, G)
-    return GP(kernel)
-end
-
-
-"""
-    build_approx_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function}, W::Integer)
-
-Build a GP with the given hyperparameters using the random subgroup approximation to an invariant kernel.
+Build a GP with the given hyperparameters that is invariant under the action of the permutations in G.
 
 # Arguments
 - `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `G::Vector{Function}`: A collection of transformations.
-- `W::Integer`: The size of the random subgroup.
+- `G::Vector{PermutationGroupElement}`: A collection of permutations.
 """
-function build_approx_invariantmatern52_gp(θ::NamedTuple, G::Vector{Function}, W::Integer)
+function build_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{PermutationGroupElement})
     base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
-    subgroup = sample(G, W; replace=false)
-    kernel = GroupInvariantKernel(base_kernel, subgroup)
+    kernel = invariantkernel(base_kernel, G)
     return GP(kernel)
 end

@@ -13,9 +13,9 @@ reporting_function = latest_point
 reporting_function_label = "Latest point"
 gp_builders = Dict([
     ("Standard", build_matern52_gp),
-    ("Fully permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d))),
-    ("2-block permutation invariant", θ -> build_invariantmatern52_gp(θ, blockpermutation_group(d, 2))),
-    ("3-block permutation invariant", θ -> build_invariantmatern52_gp(θ, blockpermutation_group(d, 3))),
+    ("Fully permutation invariant", θ -> build_perminvariantmatern52_gp(θ, permutation_group(d))),
+    ("2-block permutation invariant", θ -> build_perminvariantmatern52_gp(θ, block_permutation_group(d, 2))),
+    ("3-block permutation invariant", θ -> build_perminvariantmatern52_gp(θ, block_permutation_group(d, 3))),
 ])
 target_gp_builder = gp_builders["Fully permutation invariant"]
 target_function_seed = 1

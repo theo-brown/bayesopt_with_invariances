@@ -13,7 +13,7 @@ reporting_function = latest_point
 reporting_function_label = "Latest point"
 gp_builders = Dict([
     ("Standard", build_matern52_gp),
-    ("Permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d)))
+    ("Permutation invariant", θ -> build_perminvariantmatern52_gp(θ, permutation_group(d)))
 ])
 target_gp_builder = gp_builders["Permutation invariant"]
 target_function_seed = 43

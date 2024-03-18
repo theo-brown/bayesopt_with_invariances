@@ -12,7 +12,7 @@ reporting_function = maximum_observed_posterior_mean
 reporting_function_label = "Maximum observed posterior mean"
 gp_builders = Dict([
     ("Standard", build_matern52_gp),
-    ("Permutation invariant", θ -> build_invariantmatern52_gp(θ, permutation_group(d)))
+    ("Permutation invariant", θ -> build_perminvariantmatern52_gp(θ, permutation_group(d)))
 ])
 target_gp_builder = gp_builders["Permutation invariant"]
 target_function_seed = 43
