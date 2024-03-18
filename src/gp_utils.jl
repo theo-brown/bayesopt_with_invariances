@@ -119,4 +119,3 @@ function build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{Permuta
     kernel = invariantkernel(base_kernel, subgroup)
     return GP(kernel)
 end
-
