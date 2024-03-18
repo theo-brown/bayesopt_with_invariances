@@ -66,20 +66,41 @@ function block_cyclic_group(d::Int, l::Int)
     return [PermutationGroupElement(circshift(collect(1:d), i * l)) for i in 1:n_blocks]
 end
 
-function random_subset(G::Vector{PermutationGroupElement}, n::Int)
+function random_subgroup(G::Vector{PermutationGroupElement}, n::Int)
     if n > length(G)
         throw(ArgumentError("n must be less than or equal to the number of elements in G"))
     end
 
-    # Select n random elements from G
-    set = sample(G, n, replace=false)
+    identity_element = G[[g.is_identity for g in G]][1]
+    H = [identity_element]
 
-    # Add their inverses, except if they are already in the set
-    set_with_inverses = copy(set)
-    for g in set
-        if !(inv(g) in set_with_inverses)
-            push!(set_with_inverses, inv(g))
+    function add_closure!(H::Vector{PermutationGroupElement}, h::PermutationGroupElement)
+        for other_h in H
+            g = h ∘ other_h
+            if !(g in H)
+                push!(H, g)
+                add_closure!(H, g)
+            end
         end
     end
-    return set_with_inverses
+
+    function add_element!(H::Vector{PermutationGroupElement})
+        g = rand(G)
+        if !(g in H)
+            # Add element
+            push!(H, g)
+            # Αdd its inverse
+            if !(inv(g) in H)
+                push!(H, inv(g))
+            end
+            # Add its closure 
+            add_closure!(H, g)
+        end
+    end
+
+    while length(H) < n
+        add_element!(H)
+    end
+
+    return H
 end
