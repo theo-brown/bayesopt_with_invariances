@@ -3,7 +3,7 @@
 # seed = 42
 # d = 6
 # bounds = [(0.0, 1.0) for _ in 1:d]
-# output_directory = "data/experiment_3_ucb"
+# output_directory = "data/experiment_4_ucb"
 # n_iterations = 512
 # n_repeats = 16
 # β = 12.0
