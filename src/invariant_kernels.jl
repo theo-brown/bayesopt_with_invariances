@@ -1,13 +1,20 @@
 using KernelFunctions
 include("permutation_groups.jl")
 
-struct PartialTransformedKernel{Tk<:Kernel,Tr<:Transform} <: Kernel
+struct OneSidedTransformedKernel{Tk<:Kernel,Tr<:Transform} <: Kernel
     kernel::Tk
     transform::Tr
 end
 
-(k::PartialTransformedKernel)(x, y) = k.kernel(k.transform(x), y)
+(k::OneSidedTransformedKernel)(x, y) = k.kernel(k.transform(x), y)
 
+struct TwoSidedTransformedKernel{Tk<:Kernel,Tr<:Transform} <: Kernel
+    kernel::Tk
+    transform1::Tr
+    transform2::Tr
+end
+
+(k::TwoSidedTransformedKernel)(x, y) = k.kernel(k.transform1(x), k.transform2(y))
 
 function invariantkernel(k::Tk, G::Vector{PermutationGroupElement}) where {Tk<:Kernel}
     # Check that the inverse of each element is in the group
@@ -18,8 +25,7 @@ function invariantkernel(k::Tk, G::Vector{PermutationGroupElement}) where {Tk<:K
     end
 
     G_functions = Function[x -> x[σ.permutation] for σ in G]
-
-    return 1 / length(G) * sum([PartialTransformedKernel(k, FunctionTransform(σᵢ)) for σᵢ in G_functions])
+    return 1 / length(G) * sum([OneSidedTransformedKernel(k, FunctionTransform(σᵢ)) for σᵢ in G_functions])
 end
 
 function quasiinvariantkernel(k::Tk, G::Vector{PermutationGroupElement}, w::Vector{Tw}) where {Tk<:Kernel,Tw<:Number}
@@ -39,7 +45,16 @@ function quasiinvariantkernel(k::Tk, G::Vector{PermutationGroupElement}, w::Vect
 
     G_functions = Function[x -> x[σ.permutation] for σ in G]
 
-    return sum([wᵢ * PartialTransformedKernel(k, FunctionTransform(σᵢ)) for (σᵢ, wᵢ) in zip(G_functions, w)])
+    return sum(
+        [
+        w[i] * w[j] * TwoSidedTransformedKernel(
+            k,
+            FunctionTransform(G_functions[i]),
+            FunctionTransform(G_functions[j])
+        )
+        for i in 1:length(G), j in 1:length(G)
+    ]
+    )
 end
 
 function softmax(x::Vector{Float64})
