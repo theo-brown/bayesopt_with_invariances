@@ -44,13 +44,13 @@ function render(
 
         return figure
 
-    elseif length(bounds) == 3
+    elseif length(input_bounds) == 3
         figure = GLMakie.Figure(size=(600, 600))
         ax = GLMakie.Axis3(
             figure[1, 1],
             aspect=:equal,
             azimuth=π / 3,
-            limits=(bounds[1], bounds[2], bounds[3]),
+            limits=(input_bounds[1], input_bounds[2], input_bounds[3]),
             xlabel=L"$x_1$",
             ylabel=L"$x_2$",
             zlabel=L"$x_3$",
