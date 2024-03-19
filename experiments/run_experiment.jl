@@ -22,7 +22,7 @@ function run_experiment(
     acquisition_function_label::String,
     reporting_function::Function,
     reporting_function_label::String,
-    gp_builders::Dict{String,Function},
+    gp_builders::Dict{String,T} where {T<:Function},
     target_gp_builder::Function,
     target_function_seed::Int,
     target_function_n_points::Int,
