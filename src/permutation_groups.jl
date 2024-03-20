@@ -40,7 +40,7 @@ function Base.show(io::IO, g::PermutationGroupElement)
 end
 
 function permutation_group(d::Int)
-    return [PermutationGroupElement(p) for p in permutations(1:d)]
+    return Tuple(PermutationGroupElement(p) for p in permutations(1:d))
 end
 
 function block_permutation_group(d::Int, block_size::Int)
@@ -51,11 +51,11 @@ function block_permutation_group(d::Int, block_size::Int)
     block_indices = [collect(i:i+l-1) for i in 1:l:d]
     # Permute the block indices
     permuted_block_indices = [reduce(vcat, p) for p in permutations(block_indices)]
-    return [PermutationGroupElement(p) for p in permuted_block_indices]
+    return NTuple(PermutationGroupElement(p) for p in permuted_block_indices)
 end
 
 function cyclic_group(d::Int)
-    return [PermutationGroupElement(circshift(collect(1:d), i)) for i in 1:d]
+    return Tuple(PermutationGroupElement(circshift(collect(1:d), i)) for i in 1:d)
 end
 
 function block_cyclic_group(d::Int, l::Int)
@@ -63,10 +63,10 @@ function block_cyclic_group(d::Int, l::Int)
         throw(ArgumentError("d must be divisible by l"))
     end
     n_blocks = d / l
-    return [PermutationGroupElement(circshift(collect(1:d), i * l)) for i in 1:n_blocks]
+    return Tuple(PermutationGroupElement(circshift(collect(1:d), i * l)) for i in 1:n_blocks)
 end
 
-function random_subgroup(G::Vector{PermutationGroupElement}, n::Int)
+function random_subgroup(G::NTuple{N,PermutationGroupElement}, n::Int) where {N}
     if n > length(G)
         throw(ArgumentError("n must be less than or equal to the number of elements in G"))
     end
@@ -102,5 +102,5 @@ function random_subgroup(G::Vector{PermutationGroupElement}, n::Int)
         add_element!(H)
     end
 
-    return H
+    return Tuple(H)
 end

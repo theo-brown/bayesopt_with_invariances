@@ -88,15 +88,15 @@ end
 
 
 """
-    build_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{PermutationGroupElement})
+    build_perminvariantmatern52_gp(θ::NamedTuple, G::NTuple{N, PermutationGroupElement}) where N
 
 Build a GP with the given hyperparameters that is invariant under the action of the permutations in G.
 
 # Arguments
 - `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `G::Vector{PermutationGroupElement}`: A collection of permutations.
+- `G::NTuple{N, PermutationGroupElement}`: A collection of permutations.
 """
-function build_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{PermutationGroupElement})
+function build_perminvariantmatern52_gp(θ::NamedTuple, G::NTuple{N,PermutationGroupElement}) where {N}
     base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
     kernel = invariantkernel(base_kernel, G)
     return GP(kernel)
@@ -104,16 +104,16 @@ end
 
 
 """
-    build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{PermutationGroupElement}, n::Int)
+    build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::NTuple{N, PermutationGroupElement}, n::Int) where N
 
 Build a GP with the given hyperparameters that is a random subgroup approximation to the kernel invariant to G.
 
 # Arguments
 - `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `G::Vector{PermutationGroupElement}`: A collection of permutations.
+- `G::NTuple{N, PermutationGroupElement}`: A collection of permutations.
 - `n::Int`: The size of the random subgroup.
 """
-function build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::Vector{PermutationGroupElement}, n::Int)
+function build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::NTuple{N,PermutationGroupElement}, n::Int) where {N}
     base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
     subgroup = random_subgroup(G, n)
     kernel = invariantkernel(base_kernel, subgroup)
