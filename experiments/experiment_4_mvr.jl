@@ -1,6 +1,6 @@
 include("run_experiment.jl")
 
-seed = 42
+seed = 5
 d = 6
 bounds = [(0.0, 1.0) for _ in 1:d]
 output_directory = "data/experiment_4_mvr"
@@ -13,12 +13,13 @@ reporting_function_label = "Maximum observed posterior mean"
 gp_builders = Dict([
     ("Standard", build_matern52_gp),
     ("Fully invariant", θ -> build_perminvariantmatern52_gp(θ, permutation_group(d))),
-    ("Random subgroup (W=2)", θ -> build_approx_invariantmatern52_gp(θ, permutation_group(d), 2)),
-    ("Random subgroup (W=3)", θ -> build_approx_invariantmatern52_gp(θ, permutation_group(d), 3)),
-    ("Random subgroup (W=4)", θ -> build_approx_invariantmatern52_gp(θ, permutation_group(d), 4)),
-    ("Random subgroup (W=5)", θ -> build_approx_invariantmatern52_gp(θ, permutation_group(d), 5)),
+    ("Random subgroup (N>2)", θ -> build_approx_perminvariantmatern52_gp(θ, permutation_group(d), 2)),
+    ("Random subgroup (N>10)", θ -> build_approx_perminvariantmatern52_gp(θ, permutation_group(d), 10)),
+    ("Random subgroup (N>25)", θ -> build_approx_perminvariantmatern52_gp(θ, permutation_group(d), 25)),
+    ("Random subgroup (N>45)", θ -> build_approx_perminvariantmatern52_gp(θ, permutation_group(d), 45)),
+    ("Random subgroup (N>180)", θ -> build_approx_perminvariantmatern52_gp(θ, permutation_group(d), 180)),
 ])
-target_gp_builder = gp_builders["Invariant"]
+target_gp_builder = gp_builders["Fully invariant"]
 target_function_seed = seed
 target_function_n_points = 512
 θ = (

@@ -1,6 +1,6 @@
 include("run_experiment.jl")
 
-seed = 42
+seed = 5
 d = 6
 bounds = [(0.0, 1.0) for _ in 1:d]
 output_directory = "data/experiment_3_mvr"
@@ -17,7 +17,7 @@ gp_builders = Dict([
     ("3-block permutation invariant", θ -> build_perminvariantmatern52_gp(θ, block_permutation_group(d, 3))),
 ])
 target_gp_builder = gp_builders["Fully permutation invariant"]
-target_function_seed = 1
+target_function_seed = seed
 target_function_n_points = 512
 θ = (
     l=0.12,
