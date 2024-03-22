@@ -1,14 +1,9 @@
 using KernelFunctions
 include("permutation_groups.jl")
+include("onesided_transformedkernel.jl")
 
-struct OneSidedTransformedKernel{Tk<:Kernel,Tr<:Transform} <: Kernel
-    kernel::Tk
-    transform::Tr
-end
 
-(k::OneSidedTransformedKernel)(x, y) = k.kernel(k.transform(x), y)
-
-function invariantkernel(k::Tk, G::NTuple{N,PermutationGroupElement}) where {Tk<:Kernel,N}
+function invariantkernel(k::Kernel, G::Tuple{Vararg{PermutationGroupElement}})
     # Check that the inverse of each element is in the group
     for g in G
         if !(inv(g) in G)
@@ -16,9 +11,14 @@ function invariantkernel(k::Tk, G::NTuple{N,PermutationGroupElement}) where {Tk<
         end
     end
 
-    return 1 / length(G) * KernelSum([OneSidedTransformedKernel(k, FunctionTransform(x -> σᵢ(x))) for σᵢ in G])
+    return 1 / length(G) * KernelSum(
+        collect(
+            OneSidedTransformedKernel(k, to_transform(σ))
+            for σ in G
+        )
+    )
 end
 
-function approx_invariantkernel(k::Tk, G::NTuple{N,PermutationGroupElement}, n::Int) where {Tk<:Kernel,N}
+function approx_invariantkernel(k::Kernel, G::Tuple{Vararg{PermutationGroupElement}}, n::Int)
     return invariantkernel(k, random_subgroup(G, n))
 end
