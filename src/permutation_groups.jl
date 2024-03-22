@@ -1,8 +1,6 @@
 using Combinatorics
 using StatsBase
 
-apply_permutation(x::AbstractVector, perm::Vector{Int}) = x[perm]
-
 struct PermutationGroupElement
     is_identity::Bool
     permutation::Vector{Int}
@@ -25,7 +23,20 @@ Base.:(==)(g1::PermutationGroupElement, g2::PermutationGroupElement) = (g1.permu
 Base.:(∘)(g1::PermutationGroupElement, g2::PermutationGroupElement) = PermutationGroupElement(g1.permutation[g2.permutation])
 
 function (g::PermutationGroupElement)(x::T) where {T<:AbstractVector}
-    return apply_permutation(x, g.permutation)
+    return x[g.permutation]
+end
+
+function to_matrix(g::PermutationGroupElement)
+    d = length(g.permutation)
+    M = zeros(Int, d, d)
+    for i in 1:d
+        M[i, g.permutation[i]] = 1
+    end
+    return M
+end
+
+function to_transform(g::PermutationGroupElement)
+    return LinearTransform(to_matrix(g))
 end
 
 function Base.show(io::IO, g::PermutationGroupElement)
@@ -38,6 +49,7 @@ function Base.show(io::IO, g::PermutationGroupElement)
         print(io, "$x -> $gx")
     end
 end
+
 
 function permutation_group(d::Int)
     return Tuple(PermutationGroupElement(p) for p in permutations(1:d))
