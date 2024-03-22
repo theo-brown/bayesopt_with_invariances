@@ -8,7 +8,7 @@ using ParameterHandling, Optim # For optimisation
 Return the latest observed point.
 """
 function latest_point(posterior_gp::AbstractGPs.AbstractGP, observed_x::Matrix{Float64}, observed_y::Vector{Float64}, bounds::Vector{Tuple{Float64,Float64}})
-    return observed_x[end, :]
+    return observed_x[:, end]
 end
 
 
@@ -20,9 +20,9 @@ Return the observed point that has the highest posterior mean.
 function maximum_observed_posterior_mean(posterior_gp::AbstractGPs.AbstractGP, observed_x::Matrix{Float64}, observed_y::Vector{Float64}, bounds::Vector{Tuple{Float64,Float64}})
     # Compute the posterior mean at each observed_x 
     # Use eachrow to turn Matrix into an AbstractVector, which is required by AbstractGPs
-    μ = mean(posterior_gp(eachrow(observed_x)))
+    μ = mean(posterior_gp(ColVecs(observed_x)))
     # Return the point with the maximum posterior mean
-    return observed_x[argmax(μ), :]
+    return observed_x[:, argmax(μ)]
 end
 
 

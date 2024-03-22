@@ -3,7 +3,6 @@ using Random
 using Plots
 using LaTeXStrings
 using HDF5
-
 include("../src/gp_utils.jl")
 include("../src/objective_functions/kernel_objective_function.jl")
 include("../src/bayesopt.jl")
@@ -103,8 +102,7 @@ function run_experiment(
                 gp_builder,
                 acquisition_function,
                 reporting_function,
-                θ;
-                optimise_hyperparameters=false
+                θ,
             )
 
             # Compute the true function values

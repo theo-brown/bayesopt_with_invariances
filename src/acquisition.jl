@@ -48,7 +48,7 @@ function ucb(posterior_gp::AbstractGPs.AbstractGP, x::Vector{Float64}; beta::Flo
         return μ
     end
 
-    return μ + sqrt(beta) * sqrt(σ²)
+    return μ + beta * sqrt(σ²)
 end
 
 
@@ -58,16 +58,16 @@ end
 Given the GP model, maximise the given acquisition function using multi-start optimisation
 """
 function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bounds::Vector{Tuple{Float64,Float64}}, n_restarts::Int)
-    candidate_x = Vector{Vector{Float64}}(undef, n_restarts)
-    candidate_y = Vector{Float64}(undef, n_restarts)
-
-    # Multistart optimisation
     lower_bounds = [b[1] for b in bounds]
     upper_bounds = [b[2] for b in bounds]
     start_points = [
         bounded.(x0, lower_bounds, upper_bounds)
         for x0 in eachcol(QuasiMonteCarlo.sample(n_restarts, lower_bounds, upper_bounds, LatinHypercubeSample()))
     ]
+
+    d = length(bounds)
+    candidate_x = Matrix{Float64}(undef, d, n_restarts)
+    candidate_y = Vector{Float64}(undef, n_restarts)
 
     Threads.@threads for i in 1:n_restarts
         x0_transformed, untransform = value_flatten(start_points[i])
@@ -79,15 +79,15 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
         # Maximise the acquisition function by minimising its negative
         result = optimize(
             objective ∘ untransform,
-            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)), # TODO: We might've fixed this so that our kernels can be differentiable
+            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)),
             x0_transformed,
             inplace=false,
         )
 
-        candidate_x[i] = untransform(result.minimizer)
+        candidate_x[:, i] = untransform(result.minimizer)
         candidate_y[i] = -result.minimum # Objective was to minimise the negative of the acquisition function, so flip the sign back
     end
 
     # Return the best x
-    return candidate_x[argmax(candidate_y)]
+    return candidate_x[:, argmax(candidate_y)]
 end
