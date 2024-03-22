@@ -40,10 +40,9 @@ function build_latent_function(gp_builder_function::Function, θ::NamedTuple, n_
     true_gp = posterior(finite_gp, y)
 
     # Define the latent function
-    function f(x::Vector{Vector{Float64}})::Vector{Float64}
-        return mean(true_gp(x, jitter))
+    function f(x::AbstractMatrix)::Vector{Float64}
+        return mean(true_gp(ColVecs(x), jitter))
     end
-    f(x::Vector{Float64}) = only(f([x]))
-
+    f(x::Vector{Float64}) = only(mean(true_gp([x], jitter)))
     return f
 end
