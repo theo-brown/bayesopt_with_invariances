@@ -54,6 +54,8 @@ function run_bayesopt(
         @debug "Reporting"
         reported_x[:, i+1] = reporting_function(gp, observed_x[:, 1:i+1], observed_y[1:i+1], bounds)
         reported_y[i+1] = f(reported_x[:, i+1])
+
+        @info "Step $(i+1): $(reported_x[:, i+1]) -> $(reported_y[i+1])"
     end
 
     return observed_x, observed_y, reported_x, reported_y
