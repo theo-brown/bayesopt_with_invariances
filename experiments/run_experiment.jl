@@ -106,8 +106,8 @@ function run_experiment(
             )
 
             # Compute the true function values
-            observed_f = f([collect(xᵢ) for xᵢ in eachrow(observed_x)])
-            reported_f = f([collect(xᵢ) for xᵢ in eachrow(reported_x)])
+            observed_f = f(observed_x)
+            reported_f = f(reported_x)
 
             # Compute the regret
             regret[i, :] = regret_function(f_opt, reported_f)
