@@ -72,16 +72,33 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
     Threads.@threads for i in 1:n_restarts
         x0_transformed, untransform = value_flatten(start_points[i])
 
-        function objective(x_untransformed)
-            return -acqf(posterior_gp, x_untransformed)
+        function objective(x_transformed)
+            return -acqf(posterior_gp, untransform(x_transformed))
         end
+
+        function objective_gradient!(G, x_transformed)
+            G .= only(Zygote.gradient(objective ∘ untransform, x_transformed))
+        end
+
+        function debug_callback(state::Optim.OptimizationState)
+            @debug "- step $(state.iteration): acqf = $(state.value)"
+            return false
+        end
+
 
         # Maximise the acquisition function by minimising its negative
         result = optimize(
-            objective ∘ untransform,
-            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)),
+            objective,
+            objective_gradient!,
             x0_transformed,
-            inplace=false,
+            LBFGS(
+                alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
+                linesearch=Optim.LineSearches.BackTracking(),
+            ),
+            Optim.Options(
+                show_every=10,
+                callback=debug_callback,
+            )
         )
 
         candidate_x[:, i] = untransform(result.minimizer)
