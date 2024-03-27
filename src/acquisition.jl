@@ -57,7 +57,15 @@ end
 
 Given the GP model, maximise the given acquisition function using multi-start optimisation
 """
-function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bounds::Vector{Tuple{Float64,Float64}}, n_restarts::Int)
+function maximise_acqf(
+    posterior_gp::AbstractGPs.AbstractGP,
+    acqf::Function,
+    bounds::Vector{Tuple{Float64,Float64}},
+    n_restarts::Int;
+    use_autograd::Bool=false,
+    time_limit::Int=150,
+    tolerance::Float=1e-4,
+)
     lower_bounds = [b[1] for b in bounds]
     upper_bounds = [b[2] for b in bounds]
     start_points = [
@@ -76,30 +84,48 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
             return -acqf(posterior_gp, untransform(x_transformed))
         end
 
-        function objective_gradient!(G, x_transformed)
-            G .= only(Zygote.gradient(objective ∘ untransform, x_transformed))
-        end
-
         function debug_callback(state::Optim.OptimizationState)
             @debug "- step $(state.iteration): acqf = $(state.value)"
             return false
         end
 
 
-        # Maximise the acquisition function by minimising its negative
-        result = optimize(
-            objective,
-            objective_gradient!,
-            x0_transformed,
-            LBFGS(
-                alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
-                linesearch=Optim.LineSearches.BackTracking(),
-            ),
-            Optim.Options(
-                show_every=10,
-                callback=debug_callback,
+        if use_autograd
+            function objective_gradient!(G, x_transformed)
+                G .= only(Zygote.gradient(objective ∘ untransform, x_transformed))
+            end
+
+            result = optimize(
+                objective,
+                objective_gradient!,
+                x0_transformed,
+                LBFGS(
+                    alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
+                    linesearch=Optim.LineSearches.BackTracking(),
+                ),
+                Optim.Options(
+                    show_every=10,
+                    callback=debug_callback,
+                    time_limit=time_limit,
+                    f_tol=tolerance,
+                )
             )
-        )
+        else
+            result = optimize(
+                objective,
+                x0_transformed,
+                LBFGS(
+                    alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
+                    linesearch=Optim.LineSearches.BackTracking(),
+                ),
+                Optim.Options(
+                    show_every=10,
+                    callback=debug_callback,
+                    time_limit=time_limit,
+                    f_tol=tolerance,
+                )
+            )
+        end
 
         candidate_x[:, i] = untransform(result.minimizer)
         candidate_y[i] = -result.minimum # Objective was to minimise the negative of the acquisition function, so flip the sign back
