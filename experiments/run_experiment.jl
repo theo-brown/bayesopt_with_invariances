@@ -12,6 +12,7 @@ include("regret_plot.jl")
 
 
 function run_experiment(
+    ;
     seed::Int,
     bounds::Vector{Tuple{Float64,Float64}},
     output_directory::String,
