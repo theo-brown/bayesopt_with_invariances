@@ -58,38 +58,41 @@ end
 Given the GP model, maximise the given acquisition function using multi-start optimisation
 """
 function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bounds::Vector{Tuple{Float64,Float64}}, n_restarts::Int)
+    function objective(x)
+        return -acqf(posterior_gp, x)
+    end
+
+    function debug_callback(state::Optim.OptimizationState)
+        @debug "- step $(state.iteration): acqf = $(state.value)"
+        return false
+    end
+
     lower_bounds = [b[1] for b in bounds]
     upper_bounds = [b[2] for b in bounds]
-    start_points = [
-        bounded.(x0, lower_bounds, upper_bounds)
-        for x0 in eachcol(QuasiMonteCarlo.sample(n_restarts, lower_bounds, upper_bounds, LatinHypercubeSample()))
-    ]
-
     d = length(bounds)
+
+    start_points = Matrix{Float64}(undef, d, n_restarts)
+    if n_restarts == 1
+        # Select a point uniformly at random
+        start_points .= rand.(Uniform(lower, upper) for (lower, upper) in bounds)
+    else
+        # Select a batch of points using QMC sampling
+        # Note: LatinHypercubeSample and SobolSample are type unstable at the time of writing
+        start_points .= QuasiMonteCarlo.sample(n_restarts, lower_bounds, upper_bounds, QuasiMonteCarlo.HaltonSample())
+    end
+    bounded_start_points = bounded.(start_points, lower_bounds, upper_bounds)
+
     candidate_x = Matrix{Float64}(undef, d, n_restarts)
     candidate_y = Vector{Float64}(undef, n_restarts)
 
     Threads.@threads for i in 1:n_restarts
-        x0_transformed, untransform = value_flatten(start_points[i])
-
-        function objective(x_transformed)
-            return -acqf(posterior_gp, untransform(x_transformed))
-        end
-
-        function objective_gradient!(G, x_transformed)
-            G .= only(Zygote.gradient(objective ∘ untransform, x_transformed))
-        end
-
-        function debug_callback(state::Optim.OptimizationState)
-            @debug "- step $(state.iteration): acqf = $(state.value)"
-            return false
-        end
-
+    #for i in 1:n_restarts
+        x0_transformed, untransform = value_flatten(bounded_start_points[:, i])
 
         # Maximise the acquisition function by minimising its negative
         result = optimize(
-            objective,
-            objective_gradient!,
+            objective ∘ untransform,
+            # x_transformed -> only(Zygote.gradient(objective ∘ untransform, x_transformed)),
             x0_transformed,
             LBFGS(
                 alphaguess=Optim.LineSearches.InitialStatic(scaled=true),
@@ -98,7 +101,8 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
             Optim.Options(
                 show_every=10,
                 callback=debug_callback,
-            )
+            ),
+            # inplace=false,
         )
 
         candidate_x[:, i] = untransform(result.minimizer)
