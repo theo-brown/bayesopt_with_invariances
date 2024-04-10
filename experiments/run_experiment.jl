@@ -3,6 +3,9 @@ using Random
 using Plots
 using LaTeXStrings
 using HDF5
+using Base.Threads
+using Dates, Logging, LoggingExtras
+
 include("../src/gp_utils.jl")
 include("../src/objective_functions/kernel_objective_function.jl")
 include("../src/bayesopt.jl")
@@ -10,6 +13,17 @@ include("../src/reporting.jl")
 include("render.jl")
 include("regret_plot.jl")
 
+
+const t0 = now()
+
+timestamp_logger(logger) =
+    TransformerLogger(logger) do log
+        elapsed = canonicalize(now() - t0)
+        elapsed_time = Dates.Time(elapsed.periods...)
+        merge(log, (; message="$(Dates.format(elapsed_time, dateformat"HH:MM:SS")) $(log.message)"))
+    end
+
+ConsoleLogger(stdout, Logging.Debug) |> timestamp_logger |> global_logger
 
 function run_experiment(
     ;
@@ -103,7 +117,8 @@ function run_experiment(
                 gp_builder,
                 acquisition_function,
                 reporting_function,
-                θ,
+                θ;
+                n_restarts=nthreads(),
             )
 
             # Compute the true function values

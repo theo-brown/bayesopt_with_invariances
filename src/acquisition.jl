@@ -57,7 +57,15 @@ end
 
 Given the GP model, maximise the given acquisition function using multi-start optimisation
 """
-function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bounds::Vector{Tuple{Float64,Float64}}, n_restarts::Int)
+function maximise_acqf(
+    posterior_gp::AbstractGPs.AbstractGP,
+    acqf::Function,
+    bounds::Vector{Tuple{Float64,Float64}},
+    n_restarts::Int;
+    time_limit::Int=150,
+    acqf_tolerance::Float64=1e-4,
+    acqf_x_tolerance::Float64=1e-3,
+)
     function objective(x)
         return -acqf(posterior_gp, x)
     end
@@ -101,6 +109,9 @@ function maximise_acqf(posterior_gp::AbstractGPs.AbstractGP, acqf::Function, bou
             Optim.Options(
                 show_every=10,
                 callback=debug_callback,
+                    time_limit=time_limit,
+                    f_tol=acqf_tolerance,
+                    x_tol=acqf_x_tolerance,
             ),
             # inplace=false,
         )

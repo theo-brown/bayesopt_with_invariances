@@ -12,6 +12,9 @@ function run_bayesopt(
     reporting_function::Function,
     θ::NamedTuple;
     n_restarts::Int=1,
+    time_limit::Int=150,
+    acqf_tolerance::Float64=1e-4,
+    acqf_x_tolerance::Float64=1e-3,
 )
     # Create the output arrays
     d = length(input_bounds)
@@ -45,7 +48,15 @@ function run_bayesopt(
 
         # Generate the next observation
         @debug "Maximising acquisition function"
-        x_next = maximise_acqf(gp, acquisition_function, bounds, n_restarts)
+        x_next = maximise_acqf(
+            gp,
+            acquisition_function,
+            bounds,
+            n_restarts;
+            time_limit=time_limit,
+            acqf_tolerance=acqf_tolerance,
+            acqf_x_tolerance=acqf_x_tolerance
+        )
         observed_x[:, i+1] = x_next
         @debug "Evaluating function"
         observed_y[i+1] = f(x_next)
