@@ -64,7 +64,8 @@ function maximise_acqf(
     n_restarts::Int;
     use_autograd::Bool=false,
     time_limit::Int=150,
-    tolerance::Float=1e-4,
+    acqf_tolerance::Float64=1e-4,
+    acqf_x_tolerance::Float64=1e-3,
 )
     lower_bounds = [b[1] for b in bounds]
     upper_bounds = [b[2] for b in bounds]
@@ -107,7 +108,8 @@ function maximise_acqf(
                     show_every=10,
                     callback=debug_callback,
                     time_limit=time_limit,
-                    f_tol=tolerance,
+                    f_tol=acqf_tolerance,
+                    x_tol=acqf_x_tolerance,
                 )
             )
         else
@@ -122,7 +124,8 @@ function maximise_acqf(
                     show_every=10,
                     callback=debug_callback,
                     time_limit=time_limit,
-                    f_tol=tolerance,
+                    f_tol=acqf_tolerance,
+                    x_tol=acqf_x_tolerance,
                 )
             )
         end
