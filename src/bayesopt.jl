@@ -30,6 +30,9 @@ function run_bayesopt(
         for (lower, upper) in bounds
     ]
     observed_y[1] = f(observed_x[:, 1])
+    reported_x[:, 1] = observed_x[:, 1]
+    reported_y[1] = observed_y[1]
+
     gp = get_posterior_gp(
         gp_builder,
         ColVecs(observed_x[:, 1:1]),
