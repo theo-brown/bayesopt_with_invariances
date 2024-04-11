@@ -45,8 +45,8 @@ function run_bayesopt(
         @debug "Updating GP with $(i) observations"
         gp = get_posterior_gp(
             gp,
-            ColVecs(observed_x[:, 1:i]),
-            observed_y[1:i],
+            ColVecs(observed_x[:, i:i]),
+            observed_y[i:i],
             θ,
         )
 
