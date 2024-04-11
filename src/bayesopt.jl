@@ -3,9 +3,10 @@ using Random # For generation of the initial point
 include("acquisition.jl")
 include("gp_utils.jl")
 
+
 function run_bayesopt(
     f::Function,
-    input_bounds::Vector{Tuple{Float64,Float64}},
+    bounds::Vector{Tuple{Float64,Float64}},
     n_steps::Int,
     gp_builder::Function,
     acquisition_function::Function,
@@ -17,7 +18,7 @@ function run_bayesopt(
     acqf_x_tolerance::Float64=1e-3,
 )
     # Create the output arrays
-    d = length(input_bounds)
+    d = length(bounds)
     observed_x = Matrix{Float64}(undef, d, n_steps)
     observed_y = Vector{Float64}(undef, n_steps)
     reported_x = Matrix{Float64}(undef, d, n_steps)
