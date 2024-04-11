@@ -14,17 +14,6 @@ include("render.jl")
 include("regret_plot.jl")
 
 
-const t0 = now()
-
-timestamp_logger(logger) =
-    TransformerLogger(logger) do log
-        elapsed = canonicalize(now() - t0)
-        elapsed_time = Dates.Time(elapsed.periods...)
-        merge(log, (; message="$(Dates.format(elapsed_time, dateformat"HH:MM:SS")) $(log.message)"))
-    end
-
-ConsoleLogger(stdout, Logging.Debug) |> timestamp_logger |> global_logger
-
 function run_experiment(
     ;
     seed::Int,
@@ -48,7 +37,7 @@ function run_experiment(
     output_file = joinpath(output_directory, "results.h5")
 
     # Define the target function
-    println("Generating target function...")
+    @info "Generating target function..."
     flush(stdout)
     f = build_latent_function(
         target_gp_builder,
@@ -62,8 +51,7 @@ function run_experiment(
         render(f, bounds; output_filename=joinpath(output_directory, "latent_function"))
     end
 
-    println("Finding approximate maximum...")
-    flush(stdout)
+    @info "Finding approximate maximum..."
     x_opt, f_opt = get_approximate_maximum(f, bounds)
 
     # Regret plot setup
@@ -94,7 +82,7 @@ function run_experiment(
 
     # Run experiment
     for (label, gp_builder) in gp_builders
-        println("Running BO with $label kernel...")
+        @info "Running BO with $label kernel..."
 
         h5open(output_file, "r+") do file
             create_group(file, label)
@@ -103,8 +91,7 @@ function run_experiment(
         regret = zeros(n_repeats, n_iterations)
 
         for i in 1:n_repeats
-            println("Repeat $i/$n_repeats")
-            flush(stdout)
+            @info "Repeat $i/$n_repeats"
 
             # Set seed
             Random.seed!(seed + i)
@@ -128,8 +115,7 @@ function run_experiment(
             # Compute the regret
             regret[i, :] = regret_function(f_opt, reported_f)
 
-            println("Final regret: $(regret[i, end])")
-            flush(stdout)
+            @info "Final regret: $(regret[i, end])"
 
             # Save data to file
             h5open(output_file, "r+") do file
