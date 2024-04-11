@@ -3,7 +3,7 @@ using Plots
 using LaTeXStrings
 
 include("../src/gp_utils.jl")
-include("../src/objective_functions/kernel_objective_function.jl")
+include("../src/synthetic_objective.jl")
 
 
 function render(

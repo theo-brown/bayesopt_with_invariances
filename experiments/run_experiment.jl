@@ -7,7 +7,7 @@ using Base.Threads
 using Dates, Logging, LoggingExtras
 
 include("../src/gp_utils.jl")
-include("../src/objective_functions/kernel_objective_function.jl")
+include("../src/synthetic_objective.jl")
 include("../src/bayesopt.jl")
 include("../src/reporting.jl")
 include("render.jl")
