@@ -63,8 +63,8 @@ function maximise_acqf(
     bounds::Vector{Tuple{Float64,Float64}},
     n_restarts::Int;
     time_limit::Int=150,
-    acqf_tolerance::Float64=1e-4,
-    acqf_x_tolerance::Float64=1e-3,
+    acqf_tolerance::Float64=1e-8,
+    acqf_x_tolerance::Float64=1e-8,
 )
     function objective(x)
         return -acqf(posterior_gp, x)
@@ -94,7 +94,7 @@ function maximise_acqf(
     candidate_y = Vector{Float64}(undef, n_restarts)
 
     Threads.@threads for i in 1:n_restarts
-    #for i in 1:n_restarts
+        #for i in 1:n_restarts
         x0_transformed, untransform = value_flatten(bounded_start_points[:, i])
 
         # Maximise the acquisition function by minimising its negative
@@ -109,9 +109,9 @@ function maximise_acqf(
             Optim.Options(
                 show_every=10,
                 callback=debug_callback,
-                    time_limit=time_limit,
-                    f_tol=acqf_tolerance,
-                    x_tol=acqf_x_tolerance,
+                time_limit=time_limit,
+                f_tol=acqf_tolerance,
+                x_tol=acqf_x_tolerance,
             ),
             # inplace=false,
         )
