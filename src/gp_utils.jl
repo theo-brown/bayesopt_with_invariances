@@ -38,7 +38,7 @@ Can be used for sequential updates, by passing the posterior GP from the previou
 # Returns
 - `posterior_gp::AbstractGPs.AbstractGP`: The posterior GP.
 """
-function get_posterior_gp(gp::AbstractGPs.AbstractGP, x_train::AbstractVector, y_train::AbstractVector, θ)
+function get_posterior_gp(gp::AbstractGPs.AbstractGP, x_train::AbstractVector, y_train::AbstractVector, θ::NamedTuple)
     return posterior(gp(x_train, θ.σ_n^2 + 1e-6), y_train)
 end
 
