@@ -40,6 +40,7 @@ function render(
 
         if output_filename != ""
             Plots.savefig("$output_filename.pdf")
+            Plots.savefig("$output_filename.png")
         end
 
         return figure
