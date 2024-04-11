@@ -42,7 +42,7 @@ function run_bayesopt(
 
     for i in 1:n_steps-1
         # Update the GP
-        @debug "Updating GP with $(i) observations"
+        @debug "Updating GP with observation #$i/$n_steps"
         gp = get_posterior_gp(
             gp,
             ColVecs(observed_x[:, i:i]),
@@ -70,7 +70,7 @@ function run_bayesopt(
         reported_x[:, i+1] = reporting_function(gp, observed_x[:, 1:i+1], observed_y[1:i+1], bounds)
         reported_y[i+1] = f(reported_x[:, i+1])
 
-        @info "Step $(i+1): $(reported_x[:, i+1]) -> $(reported_y[i+1])"
+        @debug "Step $(i+1): $(reported_x[:, i+1]) -> $(reported_y[i+1])"
     end
 
     return observed_x, observed_y, reported_x, reported_y
