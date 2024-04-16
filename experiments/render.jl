@@ -109,8 +109,8 @@ function render(
     figure = render(f, input_bounds; resolution=resolution)
     if length(input_bounds) == 2
         Plots.scatter!(
-            observed_inputs[:, 1],
-            observed_inputs[:, 2],
+            observed_inputs[1, :],
+            observed_inputs[1, :],
             seriestype=:scatter,
             color=:white,
             label="Observations",
@@ -123,9 +123,9 @@ function render(
     elseif length(input_bounds) == 3
         GLMakie.scatter!(
             figure[1, 1],
-            observed_inputs[:, 1],
-            observed_inputs[:, 2],
-            observed_inputs[:, 3],
+            observed_inputs[1, :],
+            observed_inputs[2, :],
+            observed_inputs[3, :],
             color=:white,
             markersize=3,
             label="Observations"
