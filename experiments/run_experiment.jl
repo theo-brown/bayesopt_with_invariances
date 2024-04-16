@@ -134,7 +134,8 @@ function run_experiment(
             figure,
             regret,
             label,
-            regret_label
+            regret_label;
+            ylims=regret_label == "Simple regret" ? (0.0, 1.5) : nothing,
         )
     end
 
