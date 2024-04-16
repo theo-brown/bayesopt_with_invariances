@@ -4,7 +4,6 @@ using Plots
 using LaTeXStrings
 using HDF5
 using Base.Threads
-using Dates, Logging, LoggingExtras
 
 include("../src/gp_utils.jl")
 include("../src/synthetic_objective.jl")
