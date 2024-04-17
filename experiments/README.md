@@ -19,6 +19,6 @@ This folder contains the Julia scripts for running the experiments and generatin
 
 ### Experiment 3: Effect of increasing symmetry
 
-| Target function          | MVR [[code](experiment_3_mvr.jl)]                                                       | UCB [[code](experiment_3_ucb.jl)]                                                           |
+| Target function          | MVR [[code](experiment_3_mvr_mpi.jl)]                                                       | UCB [[code](experiment_3_ucb_mpi.jl)]                                                           |
 | ------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 6D permutation invariant | <img src="data/experiment_3_mvr/regret_plot.png" alt="Simple regret (MVR)" width=800px> | <img src="data/experiment_3_ucb/regret_plot.png" alt="Cumulative regret (UCB)" width=800px> |
+| 6D permutation invariant | <img src="data/experiment_3_mvr_mpi/regret_plot.png" alt="Simple regret (MVR)" width=800px> | <img src="data/experiment_3_ucb_mpi/regret_plot.png" alt="Cumulative regret (UCB)" width=800px> |
