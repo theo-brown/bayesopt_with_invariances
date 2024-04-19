@@ -38,7 +38,7 @@ function run_experiment(
     # Define the target function
     @info "Generating target function..."
     flush(stdout)
-    f = build_latent_function(
+    f = build_synthetic_objective(
         target_gp_builder,
         θ,
         target_function_n_points,

@@ -52,7 +52,7 @@ function run_experiment(
 
     # All tasks need a copy of the target function - this is deterministic given target_function_seed
     d = length(bounds)
-    f = build_latent_function(
+    f = build_synthetic_objective(
         target_gp_builder,
         θ,
         target_function_n_points,
@@ -60,14 +60,11 @@ function run_experiment(
         target_function_seed,
     )
 
-    # Find the approximate maximum of the target function
-    ## TODO: We can do this in parallel
-    x_opt, f_opt = get_approximate_maximum(f, bounds)
-
     # Initialise output file
     ## This must be done together, as the file is shared
-    # MPI.Barrier(comm)
     h5_file = h5open(output_file, "w", comm, mpi_info)
+    # atexit(() -> close(h5_file)) # There must be some way of doing this properly....
+
     ## Save metadata
     attrs(h5_file)["acquisition_function"] = acquisition_function_label
     attrs(h5_file)["reporting_function"] = reporting_function_label
@@ -79,8 +76,6 @@ function run_experiment(
     attrs(h5_file)["sigma_n"] = θ.σ_n
     attrs(h5_file)["sigma_f"] = θ.σ_f
     attrs(h5_file)["l"] = θ.l
-    attrs(h5_file)["x_opt"] = x_opt
-    attrs(h5_file)["f_opt"] = f_opt
     attrs(h5_file)["d"] = d
     attrs(h5_file)["bounds"] = bounds
 
@@ -102,13 +97,11 @@ function run_experiment(
         end
     end
 
-    ## Sync before starting the experiment
-    # MPI.Barrier(comm)
-
     # Distribute tasks 
     tasks = [(label, gp_builder, repeat) for (label, gp_builder) in gp_builders for repeat in 1:n_repeats]
     label, gp_builder, repeat = tasks[mpi_rank+1]
     @info "Worker $mpi_rank starting $label/$repeat"
+    flush(stdout)
     Random.seed!(seed + mpi_rank % n_repeats) # Repeat i should have the same seeds for all the labels/gp_builders 
 
     # Noisy observations of the functions should be dependent on this task's seed
@@ -139,8 +132,8 @@ function run_experiment(
     h5_file["$label/$repeat/reported_y"][:] = reported_y
     h5_file["$label/$repeat/reported_f"][:] = reported_f
 
-    # Close the file
-    # MPI.Barrier(comm)
-    close(h5_file)
     @info "Worker $mpi_rank finished"
+    flush(stdout)
+
+    close(h5_file)
 end

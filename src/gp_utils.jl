@@ -43,48 +43,36 @@ function get_posterior_gp(gp::AbstractGPs.AbstractGP, x_train::AbstractVector, y
 end
 
 """
-    build_matern52_gp(θ::NamedTuple)
+    build_gp(θ::NamedTuple)
 
 Build a Matern 5/2 GP with the given hyperparameters.
 
 # Arguments
 - `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
 """
-function build_matern52_gp(θ::NamedTuple)::AbstractGPs.AbstractGP
+function build_gp(θ::NamedTuple)::AbstractGPs.AbstractGP
     kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
     return GP(kernel)
 end
 
 
 """
-    build_perminvariantmatern52_gp(θ::NamedTuple, G::Tuple{Vararg{PermutationGroupElement}})
+    build_invariant_gp(θ::NamedTuple, T::Tuple{Vararg{Transform}})
 
-Build a GP with the given hyperparameters that is invariant under the action of the permutations in G.
-
-# Arguments
-- `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `G::Tuple{Vararg{PermutationGroupElement}}`: A collection of permutations.
-"""
-function build_perminvariantmatern52_gp(θ::NamedTuple, G::Tuple{Vararg{PermutationGroupElement}})
-    base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
-    kernel = invariantkernel(base_kernel, G)
-    return GP(kernel)
-end
-
-
-"""
-    build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::Tuple{Vararg{PermutationGroupElement}}, n::Int)
-
-Build a GP with the given hyperparameters that is a random subgroup approximation to the kernel invariant to G.
+Build a Matern 5/2 GP with the given hyperparameters that is invariant under the action of transformations T.
 
 # Arguments
 - `θ::NamedTuple`: A named tuple containing the hyperparameters σ_f, l, and σ_n.
-- `G::Tuple{Vararg{PermutationGroupElement}}`: A collection of permutations.
-- `n::Int`: The size of the random subgroup.
+- `T::Tuple{Vararg{Transform}}`: A collection of transformations
 """
-function build_approx_perminvariantmatern52_gp(θ::NamedTuple, G::Tuple{Vararg{PermutationGroupElement}}, n::Int)
+function build_invariant_gp(θ::NamedTuple, T::Tuple{Vararg{Transform}})
     base_kernel = θ.σ_f^2 * with_lengthscale(Matern52Kernel(), θ.l)
-    subgroup = random_subgroup(G, n)
-    kernel = invariantkernel(base_kernel, subgroup)
+    if applicable(length, θ.l)
+        # ARD case
+        kernel = invariant_kernel(base_kernel, T)
+    else
+        # Isotropic case
+        kernel = isotropic_invariant_kernel(base_kernel, T)
+    end
     return GP(kernel)
 end

@@ -5,10 +5,13 @@
 # Reporting function:   Most recent point
 # Kernels:              Standard, Fully permutation invariant, 2-block permutation invariant, 3-block permutation invariant
 
+include("../src/permutation_groups.jl")
 include("run_experiment_mpi.jl")
 
 const d = 6
-const G = permutation_group(d)
+const T₁ = to_transform.(permutation_group(d))
+const T₂ = to_transform.(block_permutation_group(d, 2))
+const T₃ = to_transform.(block_permutation_group(d, 3))
 const β = 2.5
 
 run_experiment(
@@ -22,11 +25,12 @@ run_experiment(
     reporting_function=latest_point,
     reporting_function_label="Latest point",
     gp_builders=Dict([
-        ("Standard", build_matern52_gp),
-        ("Fully permutation invariant", θ -> build_perminvariantmatern52_gp(θ, G)),
-        ("2-block permutation invariant", θ -> build_perminvariantmatern52_gp(θ, block_permutation_group(d, 2))),
-        ("3-block permutation invariant", θ -> build_perminvariantmatern52_gp(θ, block_permutation_group(d, 3))),]),
-    target_gp_builder=θ -> build_perminvariantmatern52_gp(θ, G),
+        ("Standard", build_gp),
+        ("Fully permutation invariant", θ -> build_invariant_gp(θ, T₁)),
+        ("2-block permutation invariant", θ -> build_invariant_gp(θ, T₂)),
+        ("3-block permutation invariant", θ -> build_invariant_gp(θ, T₃))
+    ]),
+    target_gp_builder=θ -> build_invariant_gp(θ, T₁),
     target_function_seed=5,
     target_function_n_points=512,
     θ=(

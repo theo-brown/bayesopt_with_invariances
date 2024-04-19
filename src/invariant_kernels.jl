@@ -1,24 +1,24 @@
 using KernelFunctions
-include("permutation_groups.jl")
-include("onesided_transformedkernel.jl")
+include("onesided_transformed_kernel.jl")
+include("asymmetric_transformed_kernel.jl")
 
 
-function invariantkernel(k::Kernel, G::Tuple{Vararg{PermutationGroupElement}})
-    # Check that the inverse of each element is in the group
-    for g in G
-        if !(inv(g) in G)
-            throw(ArgumentError("Inverse of $g is not in the group"))
-        end
-    end
-
-    return 1 / length(G) * KernelSum(
-        collect(
-            OneSidedTransformedKernel(k, to_transform(σ))
-            for σ in G
+function isotropic_invariant_kernel(k::Kernel, T::Tuple{Vararg{Transform}})
+    return 1 / length(T) * KernelSum(
+        collect( # Collect is required because KernelSum can't take generators currently
+            OneSidedTransformedKernel(k, t)
+            for t in T
         )
     )
 end
 
-function approx_invariantkernel(k::Kernel, G::Tuple{Vararg{PermutationGroupElement}}, n::Int)
-    return invariantkernel(k, random_subgroup(G, n))
+
+function invariant_kernel(k::Kernel, T::Tuple{Vararg{Transform}})
+    return 1 / length(T)^2 * KernelSum(
+        collect( # Collect is required because KernelSum can't take generators currently
+            AsymmetricTransformedKernel(k, t₁, t₂)
+            for t₁ in T
+            for t₂ in T
+        )
+    )
 end

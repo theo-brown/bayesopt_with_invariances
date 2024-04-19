@@ -2,13 +2,14 @@
 # Dimension:            3
 # True invariance:      Cyclic invariant
 # Acquisition function: Maximum variance reduction
-# Reporting function:   Maximum observed posterior mean
+# Reporting function:   Maximum posterior mean
 # Kernels:              Standard, Cyclic invariant
 
+include("../src/permutation_groups.jl")
 include("run_experiment.jl")
 
 const d = 3
-const G = cyclic_group(d)
+const T = to_transform.(cyclic_group(d))
 
 run_experiment(
     seed=42,
@@ -18,13 +19,13 @@ run_experiment(
     n_repeats=32,
     acquisition_function=mvr,
     acquisition_function_label="MVR",
-    reporting_function=maximum_observed_posterior_mean,
-    reporting_function_label="Maximum observed posterior mean",
+    reporting_function=maximum_posterior_mean,
+    reporting_function_label="Maximum posterior mean",
     gp_builders=Dict([
-        ("Standard", build_matern52_gp),
-        ("Cyclic invariant", θ -> build_perminvariantmatern52_gp(θ, G))
+        ("Standard", build_gp),
+        ("Cyclic invariant", θ -> build_invariant_gp(θ, T))
     ]),
-    target_gp_builder=θ -> build_perminvariantmatern52_gp(θ, G),
+    target_gp_builder=θ -> build_invariant_gp(θ, T),
     target_function_seed=20,
     target_function_n_points=128,
     θ=(

@@ -1,5 +1,6 @@
 using Combinatorics
 using StatsBase
+using KernelFunctions # For Transform type 
 
 struct PermutationGroupElement
     is_identity::Bool
