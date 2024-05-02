@@ -25,6 +25,9 @@ This folder contains the scripts for running the experiments and generating the 
 | ------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | 6D permutation invariant | <img src="data/experiment_3_mvr_mpi/regret_plot.png" alt="Simple regret (MVR)" width=800px> | <img src="data/experiment_3_ucb_mpi/regret_plot.png" alt="Cumulative regret (UCB)" width=800px> |
 
+#### Computational cost
+
+<img src="data/experiment_3_benchmark/fit_gp_times.png" alt="Simple regret (MVR)" width=800px>
 
 ## Cache model
 
