@@ -3,10 +3,10 @@ using HDF5
 using Random
 using Plots, LaTeXStrings
 
-include("../src/gp_utils.jl")
-include("../src/synthetic_objective.jl")
-include("../src/bayesopt.jl")
-include("../src/reporting.jl")
+include("../../src/gp_utils.jl")
+include("../../src/synthetic_objective.jl")
+include("../../src/bayesopt.jl")
+include("../../src/reporting.jl")
 include("render.jl")
 include("regret_plot.jl")
 
