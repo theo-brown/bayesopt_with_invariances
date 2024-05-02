@@ -22,6 +22,7 @@ function run_experiment(
     n_repeats::Int,
     acquisition_function::Function,
     acquisition_function_label::String,
+    acquisition_function_restarts::Int,
     reporting_function::Function,
     reporting_function_label::String,
     gp_builders::Dict{String,T} where {T<:Function},
@@ -104,7 +105,7 @@ function run_experiment(
                 acquisition_function,
                 reporting_function,
                 θ;
-                n_restarts=nthreads(),
+                n_restarts=acquisition_function_restarts,
             )
 
             # Compute the true function values

@@ -19,6 +19,7 @@ run_experiment(
     n_repeats=32,
     acquisition_function=mvr,
     acquisition_function_label="MVR",
+    acquisition_function_restarts=10,
     reporting_function=maximum_posterior_mean,
     reporting_function_label="Maximum posterior mean",
     gp_builders=Dict([

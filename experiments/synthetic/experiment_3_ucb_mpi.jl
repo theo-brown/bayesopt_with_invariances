@@ -12,7 +12,7 @@ const d = 6
 const T₁ = to_transform.(permutation_group(d))
 const T₂ = to_transform.(block_permutation_group(d, 2))
 const T₃ = to_transform.(block_permutation_group(d, 3))
-const β = 5.0
+const β = 2.0
 
 run_experiment(
     seed=42,
@@ -22,6 +22,7 @@ run_experiment(
     n_repeats=4,
     acquisition_function=(gp, x) -> ucb(gp, x; beta=β),
     acquisition_function_label="UCB, β=$β",
+    acquisition_function_restarts=10,
     reporting_function=latest_point,
     reporting_function_label="Latest point",
     gp_builders=Dict([
