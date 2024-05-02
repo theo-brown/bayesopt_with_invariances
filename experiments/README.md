@@ -29,3 +29,9 @@ This folder contains the scripts for running the experiments and generating the 
 ## Cache model
 
 Coming soon
+
+## Nuclear fusion scenario design
+
+| Input visualisation                                                             | Results     |
+| ------------------------------------------------------------------------------- | ----------- |
+| <img src="fusion/fusion_profiles.png" alt="ECRH launcher profiles" width=800px> | Coming soon |
