@@ -1,6 +1,8 @@
 # Experiments
 
-This folder contains the Julia scripts for running the experiments and generating the plots.
+This folder contains the scripts for running the experiments and generating the plots.
+
+## Synthetic
 
 ### Experiment 1: 2D permutation group
 
@@ -22,3 +24,8 @@ This folder contains the Julia scripts for running the experiments and generatin
 | Target function          | MVR [[code](experiment_3_mvr_mpi.jl)]                                                       | UCB [[code](experiment_3_ucb_mpi.jl)]                                                           |
 | ------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | 6D permutation invariant | <img src="data/experiment_3_mvr_mpi/regret_plot.png" alt="Simple regret (MVR)" width=800px> | <img src="data/experiment_3_ucb_mpi/regret_plot.png" alt="Cumulative regret (UCB)" width=800px> |
+
+
+## Cache model
+
+Coming soon
