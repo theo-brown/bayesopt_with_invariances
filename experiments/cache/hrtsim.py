@@ -1,15 +1,23 @@
 import numpy as np
-from typing import List
+from typing import Iterable
 from collections import deque
 
 
 class HRTSim:
-    def __init__(self, plog:List, tcm_size:int, l1_size:List, timescale:float, l1_latency:float, ram_latency:float) -> None:
+    def __init__(
+        self,
+        plog: Iterable,
+        tcm_size: int,
+        l1_size: int,
+        timescale: float,
+        l1_latency: float,
+        ram_latency: float,
+    ) -> None:
         self.plog = plog
         self.tcm_size = tcm_size
         self.l1_size = l1_size
         self.ts = timescale
-        
+
         self.l1_latency = l1_latency
         self.ram_latency = ram_latency
 
@@ -61,14 +69,14 @@ class HRTSim:
         except StopIteration:
             pass
 
-        self.LRU_deque=deque(self.l1)
-    
+        self.LRU_deque = deque(self.l1)
+
     def _empty_cache(self):
-        self.tcm =  deque([], maxlen=self.tcm_size) 
+        self.tcm = deque([], maxlen=self.tcm_size)
         self.l1 = deque([], maxlen=self.l1_size)
-        self.ram = deque([], maxlen=int(1e6)) 
+        self.ram = deque([], maxlen=int(1e6))
         self.LRU_deque = deque([])
-        
+
 
 if __name__ == "__main__":
     symbols = np.array(range(100))
