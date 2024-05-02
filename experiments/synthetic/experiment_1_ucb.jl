@@ -10,7 +10,9 @@ include("run_experiment.jl")
 
 const d = 2
 const T = to_transform.(permutation_group(d))
-const β = 2.0
+const β = 2.5
+
+@info "Running on $(Threads.nthreads()) threads"
 
 run_experiment(
     seed=42,

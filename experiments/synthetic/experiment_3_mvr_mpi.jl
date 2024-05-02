@@ -5,7 +5,7 @@
 # Reporting function:   Maximum posterior mean
 # Kernels:              Standard, Fully permutation invariant, 2-block permutation invariant, 3-block permutation invariant
 
-include("../src/permutation_groups.jl")
+include("../../src/permutation_groups.jl")
 include("run_experiment_mpi.jl")
 
 const d = 6

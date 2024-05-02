@@ -17,7 +17,7 @@ run_experiment(
     bounds=[(0.0, 1.0) for _ in 1:d],
     output_directory="data/experiment_2_ucb",
     n_iterations=512,
-    n_repeats=5,
+    n_repeats=32,
     acquisition_function=(gp, x) -> ucb(gp, x; beta=β),
     acquisition_function_label="UCB, β=$β",
     acquisition_function_restarts=10,

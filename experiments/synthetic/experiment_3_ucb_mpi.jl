@@ -1,11 +1,11 @@
 # Experiment 3.2
 # Dimension:            6
 # True invariance:      Permutation invariant
-# Acquisition function: Upper Confidence Bound, β=5.
+# Acquisition function: Upper Confidence Bound, β=2.0
 # Reporting function:   Most recent point
 # Kernels:              Standard, Fully permutation invariant, 2-block permutation invariant, 3-block permutation invariant
 
-include("../src/permutation_groups.jl")
+include("../../src/permutation_groups.jl")
 include("run_experiment_mpi.jl")
 
 const d = 6
@@ -17,9 +17,9 @@ const β = 2.0
 run_experiment(
     seed=42,
     bounds=[(0.0, 1.0) for _ in 1:d],
-    output_directory="data/experiment_3_ucb_mpi_test",
-    n_iterations=10,
-    n_repeats=4,
+    output_directory="data/experiment_3_ucb_mpi",
+    n_iterations=256,
+    n_repeats=32,
     acquisition_function=(gp, x) -> ucb(gp, x; beta=β),
     acquisition_function_label="UCB, β=$β",
     acquisition_function_restarts=10,

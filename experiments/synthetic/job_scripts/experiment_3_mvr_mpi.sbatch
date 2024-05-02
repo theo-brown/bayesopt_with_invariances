@@ -1,16 +1,16 @@
 #!/bin/bash
-#SBATCH -J Ex3_MVR_MPI_v1.0
+#SBATCH -J ex3mvr
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p sapphire
 #SBATCH --output=%x_%j.out
-#SBATCH --nodes=2
+#SBATCH --nodes=6
 #SBATCH --ntasks=128     # 32 repeats x 4 kernels
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=5
 #SBATCH --time=24:00:00
 #SBATCH --mail-type=ALL
 
 # Set up hardware
-export OMP_NUM_THREADS=1
+unset OMP_NUM_THREADS
 export I_MPI_PIN_DOMAIN=omp:compact
 export I_MPI_PIN_ORDER=scatter
 
@@ -21,7 +21,7 @@ module load rhel8/default-icl
 source /home/tab53/.bashrc
 
 # Change directory
-cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/bayesopt_with_invariances/experiments
+cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/bayesopt_with_invariances/experiments/synthetic
 
 # Run the script
 # export JULIA_DEBUG=user
