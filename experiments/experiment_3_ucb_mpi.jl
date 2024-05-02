@@ -1,7 +1,7 @@
 # Experiment 3.2
 # Dimension:            6
 # True invariance:      Permutation invariant
-# Acquisition function: Upper Confidence Bound, β=2.5
+# Acquisition function: Upper Confidence Bound, β=5.
 # Reporting function:   Most recent point
 # Kernels:              Standard, Fully permutation invariant, 2-block permutation invariant, 3-block permutation invariant
 
@@ -12,14 +12,14 @@ const d = 6
 const T₁ = to_transform.(permutation_group(d))
 const T₂ = to_transform.(block_permutation_group(d, 2))
 const T₃ = to_transform.(block_permutation_group(d, 3))
-const β = 2.5
+const β = 5.0
 
 run_experiment(
     seed=42,
     bounds=[(0.0, 1.0) for _ in 1:d],
-    output_directory="data/experiment_3_ucb_mpi",
-    n_iterations=512,
-    n_repeats=32,
+    output_directory="data/experiment_3_ucb_mpi_test",
+    n_iterations=10,
+    n_repeats=4,
     acquisition_function=(gp, x) -> ucb(gp, x; beta=β),
     acquisition_function_label="UCB, β=$β",
     reporting_function=latest_point,
@@ -30,9 +30,10 @@ run_experiment(
         ("2-block permutation invariant", θ -> build_invariant_gp(θ, T₂)),
         ("3-block permutation invariant", θ -> build_invariant_gp(θ, T₃))
     ]),
-    target_gp_builder=θ -> build_invariant_gp(θ, T₁),
+    # target_gp_builder=θ -> build_invariant_gp(θ, T₁),
+    target_gp_builder=build_gp,
     target_function_seed=5,
-    target_function_n_points=512,
+    target_function_n_points=128,
     θ=(
         l=0.12,
         σ_f=1.0,

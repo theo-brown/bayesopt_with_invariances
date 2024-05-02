@@ -17,7 +17,7 @@ run_experiment(
     seed=42,
     bounds=[(0.0, 1.0) for _ in 1:d],
     output_directory="data/experiment_3_mvr_mpi",
-    n_iterations=512,
+    n_iterations=256,
     n_repeats=32,
     acquisition_function=mvr,
     acquisition_function_label="MVR",
