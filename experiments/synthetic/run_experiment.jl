@@ -47,9 +47,6 @@ function run_experiment(
         target_function_seed,
     )
     f_noisy(x) = f(x) + randn() * θ.σ_n
-    if length(bounds) in [2, 3]
-        render(f, bounds; output_filename=joinpath(output_directory, "latent_function"))
-    end
 
     @info "Finding approximate maximum..."
     x_opt, f_opt = get_approximate_maximum(f, bounds)
