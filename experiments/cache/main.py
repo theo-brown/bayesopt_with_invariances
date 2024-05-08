@@ -45,9 +45,9 @@ cache_model = HRTSim(
 )
 
 # Optimization settings
-n_restarts = 5
-iterations_per_restart = 10
-points_per_iteration = 10
+n_restarts = 20
+iterations_per_restart = 100
+points_per_iteration = 100
 objective = (
     lambda x: torch.tensor(-cache_model(x.squeeze().detach().cpu().numpy()))
     .reshape(1, 1)
@@ -55,7 +55,7 @@ objective = (
 )
 
 # BayesOpt settings
-n_iterations = 10
+n_bo_iterations = 10
 
 # GP settings
 if args.invariant:
@@ -94,7 +94,7 @@ mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
 fit_gpytorch_mll(mll)
 
 # Main loop
-for i in range(n_iterations):
+for i in range(n_bo_iterations):
     # Optimize the acquisition function
     candidate, acqf_value = maximise_acqf(
         acqf=UpperConfidenceBound(gp, beta=args.beta),
@@ -124,6 +124,7 @@ for i in range(n_iterations):
     fit_gpytorch_mll(mll)
 
 # Save the results
+label = "invariant" if args.invariant else "standard"
 with h5py.File("results.h5", "w") as h5:
-    h5["x"] = x
-    h5["y"] = y
+    h5[f"{label}/symbol_order"] = x.detach().cpu().numpy()
+    h5[f"{label}/time"] = -y.detach().cpu().numpy()
