@@ -56,7 +56,7 @@ objective = (
 )
 
 # BayesOpt settings
-n_iterations = 256
+n_bo_iterations = 256
 
 # GP settings
 if args.invariant:
@@ -95,7 +95,7 @@ mll = ExactMarginalLogLikelihood(gp.likelihood, gp)
 fit_gpytorch_mll(mll)
 
 # Main loop
-for i in range(n_iterations):
+for i in range(n_bo_iterations):
     # Optimize the acquisition function
     candidate, acqf_value = maximise_acqf(
         acqf=UpperConfidenceBound(gp, beta=args.beta),
@@ -126,6 +126,6 @@ for i in range(n_iterations):
     fit_gpytorch_mll(mll)
 
 # Save the results
-with h5py.File(f"{label}_results.h5", "w") as h5:
-    h5["x"] = x
-    h5["y"] = y
+with h5py.File("results.h5", "w") as h5:
+    h5[f"{label}/symbol_order"] = x.detach().cpu().numpy()
+    h5[f"{label}/time"] = -y.detach().cpu().numpy()
