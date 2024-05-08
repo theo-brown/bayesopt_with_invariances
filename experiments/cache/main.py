@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--beta", type=int, default=2.0)
 parser.add_argument("--invariant", type=bool, default=False)
 args = parser.parse_args()
-
+label = "invariant" if args.invariant else "standard"
 
 # Random seed
 seed = 0
@@ -26,7 +26,7 @@ torch.manual_seed(seed)
 np.random.seed(seed)
 
 # Torch settings
-device = torch.device("cpu")
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 dtype = torch.float32
 
 # Cache model settings
@@ -45,9 +45,10 @@ cache_model = HRTSim(
 )
 
 # Optimization settings
-n_restarts = 5
-iterations_per_restart = 10
-points_per_iteration = 10
+n_restarts = 8
+iterations_per_restart = 256
+points_per_iteration = 128
+n_initial_samples = 1024
 objective = (
     lambda x: torch.tensor(-cache_model(x.squeeze().detach().cpu().numpy()))
     .reshape(1, 1)
@@ -55,16 +56,16 @@ objective = (
 )
 
 # BayesOpt settings
-n_iterations = 10
+n_iterations = 256
 
 # GP settings
 if args.invariant:
-    tcm_indices = torch.arange(tcm_size)
-    non_tcm_indices = torch.arange(tcm_size, n_symbols)
+    tcm_indices = torch.arange(tcm_size, device=device, dtype=dtype)
+    non_tcm_indices = torch.arange(tcm_size, n_symbols, device=device, dtype=dtype)
 
     def tcm_permutation(x: torch.Tensor) -> torch.Tensor:
         permuted_indices = [
-            torch.cat([torch.tensor(list(permuted_tcm_indices)), non_tcm_indices])
+            torch.cat([torch.tensor(list(permuted_tcm_indices)), non_tcm_indices]).to(device=device, dtype=dtype)
             for permuted_tcm_indices in permutations(tcm_indices)
         ]
         permuted_x = x[..., permuted_indices]
@@ -103,6 +104,7 @@ for i in range(n_iterations):
         n_restarts=n_restarts,
         iterations_per_restart=iterations_per_restart,
         points_per_iteration=points_per_iteration,
+        n_initial_samples=n_initial_samples,
         device=device,
         dtype=dtype,
     )
@@ -111,8 +113,8 @@ for i in range(n_iterations):
     y_candidate = objective(candidate)
 
     # Update the data
-    x = torch.vstack([x, candidate])
-    y = torch.vstack([y, y_candidate])
+    x = torch.vstack([x, candidate]).to(device=device, dtype=dtype)
+    y = torch.vstack([y, y_candidate]).to(device=device, dtype=dtype)
 
     # Update the model with the new data
     gp = SingleTaskGP(
@@ -124,6 +126,6 @@ for i in range(n_iterations):
     fit_gpytorch_mll(mll)
 
 # Save the results
-with h5py.File("results.h5", "w") as h5:
+with h5py.File(f"{label}_results.h5", "w") as h5:
     h5["x"] = x
     h5["y"] = y
