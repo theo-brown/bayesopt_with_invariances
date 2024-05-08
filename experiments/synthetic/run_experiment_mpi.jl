@@ -138,7 +138,6 @@ function run_experiment(
         reported_f = f(reported_x)
 
         # Save to the file
-        h5open(output_file, "r+", comm, mpi_info) do h5_file
             h5_file["$label/$repeat/observed_x"][:, :] = observed_x
             h5_file["$label/$repeat/observed_y"][:] = observed_y
             h5_file["$label/$repeat/observed_f"][:] = observed_f
@@ -146,7 +145,6 @@ function run_experiment(
             h5_file["$label/$repeat/reported_x"][:, :] = reported_x
             h5_file["$label/$repeat/reported_y"][:] = reported_y
             h5_file["$label/$repeat/reported_f"][:] = reported_f
-        end
 
         @info "Worker $mpi_rank finished"
         flush(stdout)
