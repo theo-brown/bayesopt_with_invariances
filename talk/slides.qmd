@@ -1,0 +1,217 @@
+---
+title: Sample-efficient Bayesian optimisation <br>using known invariances
+format: clean-revealjs
+html-math-method:
+  method: mathjax
+  url: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+subtitle: 20th June, 2024
+author:
+  - name: Theo Brown
+    email: theo.brown@ukaea.uk
+    affiliations:
+      - UK Atomic Energy Authority 
+      - UCL Electronic & Electrical Engineering
+  - name: Alexandru Cioba
+    email: alexandru.cioba@mtkresearch.com
+    affiliations: MediaTek Research
+  - name: Ilija Bogunovic
+    email: i.bogunovic@ucl.ac.uk
+    affiliations: UCL Electronic & Electrical Engineering
+title-slide-attributes:
+    data-background-image: images/gp.png
+    data-background-size: cover
+    data-background-opacity: "0.2"
+auto-play-media: true
+---
+
+## Overview
+
+::: {.incremental}
+- Intro
+  - Optimisation is everywhere 
+  - Gaussian processes for Bayesian optimisation
+  - Structure is everywhere
+  - Mathematical invariance 
+- Invariant Gaussian processes
+- Information gain and regret analysis
+- Application: design of fusion reactors
+- What next?
+:::
+
+# Optimisation is everywhere {background-color="#40666e"}
+
+## Optimisation is everywhere
+
+- Neural architecture search
+
+::: {.fragment}
+![BANANAS: Bayesian Optimization with Neural Architectures for Neural Architecture Search [[White et al. 2021](https://arxiv.org/abs/1910.11858)]](images/neural_architecture_search.png){height=500}
+:::
+
+## Optimisation is everywhere
+
+- Neural architecture search
+- Chip design
+
+::: {.fragment}
+![AutoDMP: Automated DREAMPlace-based Macro Placement [[Agnesina et al. 2022](https://dl.acm.org/doi/abs/10.1145/3569052.3578923)]](images/macro_placement.gif){height=450 loop=true}
+:::
+
+## Optimisation is everywhere
+
+- Neural architecture search
+- Chip design
+- Nuclear fusion reactors: coil design, trajectories, operating conditions...
+  
+::: {.fragment layout-ncol=3 layout-valign="center"}
+![Designing tokamak coils [UKAEA]](images/coil_design.jpg)
+
+![MAST-U [UKAEA]](images/mastu.jpg)
+
+
+![Designing stellarator coils [[Proxima Fusion](https://www.linkedin.com/posts/proximafusion_stellarators-optimization-automation-activity-7143651503143137281-SO71)]](images/proxima.mp4){loop=true}
+:::
+
+## Optimisation is everywhere
+
+- Neural architecture search
+- Chip design
+- Nuclear fusion reactors: coil design, trajectories, operating conditions...
+  
+::: {.fragment layout-ncol=2 layout-valign="center"}
+![Designing plasma shapes [[MIT](https://news.mit.edu/2019/steering-d-turn-nuclear-fusion-0517)]](images/plasma_shape.jpg)
+
+![Suppressing instabilities [[General Atomics](https://www.world-nuclear-news.org/C-Progress-in-controlling-fusion-heat-bursts-18031501.html)]](images/plasma_elms.jpg)
+:::
+
+## Optimisation is everywhere
+
+- Neural architecture search
+- Chip design
+- Nuclear fusion reactors: coil design, trajectories, operating conditions...
+
+::: {.incremental}
+For real-world applications, we need:
+
+- High [sample efficiency]{.alert}
+- [Global]{.alert}, non-convex optimisation
+:::
+
+::: {.fragment}
+*Example: converging a fusion plasma simulation to steady-state operating condition takes around 4 hours on HPC!*
+:::
+
+# Gaussian processes for Bayesian optimisation {background-color="#40666e"}
+
+## Gaussian processes for Bayesian optimisation
+### Sample efficient global optimisation
+
+::: {.incremental}
+- Find $\arg\max_x f(x)$ from noisy observations $y_i = f(x_i) + \epsilon_i$
+- Central idea: choose next candidate $x_{t+1}$ based on all previously observed candidates
+$\mathcal{D} = \{(x_i, y_i)\}_{i=1}^t$
+  - Requires model to predict $f(x_{t+1}) \ | \ x_{t+1},\  \mathcal{D}$
+  - How do we balance exploration and exploitation?
+  - Requires a notion of [uncertainty]{.alert}
+:::
+
+## Gaussian processes for Bayesian optimisation
+### Gaussian processes as distributions over functions
+
+::: {.fragment .callout-tip title="Definition: Gaussian process"}
+A Gaussian process with mean function $m : \mathcal{X} \to \mathbb{R}$ and kernel $k: \mathcal{X} \times \mathcal{X} \to \mathbb{R}$ can be viewed as a distribution over functions $f: \mathcal{X} \to \mathbb{R}$:
+$$
+\begin{equation}
+f \sim \mathcal{GP}\left(m(\cdot), k(\cdot, \cdot)\right).
+\end{equation}
+$$
+The GP gives a predictive distribution over $f(x_{t+1})$:
+$$
+\begin{equation}
+f(x_{t+1}) \ | \ \mathcal{D} \sim \mathcal{N}(\mu_t(x_{t+1}), \sigma^2_t(x_{t+1})), 
+\end{equation}
+$$
+with analytic forms for $\mu_t(x_{t+1})$ and $\sigma^2_t(x_{t+1})$ in terms of $m, k, \mathcal{D}$ and $x_{t+1}$.
+
+For simplicity, we normally let $m = 0$ without loss of generality.
+:::
+
+::: {.fragment}
+- Use predictive distribution at candidate $x_{t+1}$ to choose 'useful' candidates
+:::
+
+## Gaussian processes for Bayesian optimisation
+### Acquisition functions
+
+::: {.incremental}
+- Acquisition functions provide a criterion for [usefulness]{.alert}
+- Examples:
+  - Maximum variance reduction *(explore greedily)*
+    $$x_{t+1} = \arg \max_x \sigma_{t}(x)$$
+  - Upper confidence bound *(balance explore + exploit)* 
+    $$x_{t+1} = \arg \max_x \left(\mu_t(x) + \beta \sigma_t(x)\right)$$
+:::
+
+## Gaussian processes for Bayesian optimisation
+### Reporting rules and regret
+
+::: {.incremental}
+- Combine with a reporting rule at stopping time $T$
+  - Example: maximum posterior mean
+   $$\hat{x}_\mathrm{opt} = \arg \max_x \mu_T(x)$$
+- Performance of an algorithm quantified by *simple regret*
+$$
+    r_T = \arg \max_x f(x) - f(\hat{x}_\mathrm{opt})
+$$
+- Goal is to achieve $r_T \to 0$ as $T \to \infty$
+:::
+
+
+## Gaussian processes for Bayesian optimisation
+### Example algorithm
+
+::: {.absolute style="text-align:center;"}
+![](images/mvr.png){width=70%}
+:::
+
+## Gaussian processes for Bayesian optimisation
+### Gaussian processes and function spaces
+
+::: {.incremental}
+- Choice of kernel $k$ defines what kind of function can be represented *(smoothness, periodicity, ...)*
+- Examples:
+  - Matern
+  - Periodic
+- For best sample efficiency, choose a $k$ that captures [all prior information]{.alert} about $f$
+  - *Underlying structure*
+:::
+
+
+# Structure is everywhere {background-color="#40666e"}
+
+## Structure is everywhere  
+### Physics, geometry, and identity
+
+:::: {.columns}
+::: {.column .fragment width=40%}
+Symmetry in cart-pole
+
+![](images/cartpole_fast.mp4){loop=true}
+:::
+
+::: {.column .fragment width=60%}
+Transformation invariance in images
+
+![](images/cat_transformed.png)
+:::
+::::
+
+
+
+## What is invariance?
+
+- qux
+
+## How can we encode invariance into GPs?
+
+- baz
