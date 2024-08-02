@@ -5,3 +5,16 @@ old/
 batch_scripts/*.out
 
 examples/data
+botorch_experiments/
+.ipynb_checkpoints/
+**__pycache__/
+final_submission/
+final_submission.zip
+maxvar_botorch/
+src/
+changelog.txt
+figures.zip
+literature/
+notes/
+figures/
+paper/
