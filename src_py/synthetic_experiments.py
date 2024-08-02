@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("objective", type=str, choices=["PermInv-2D", "CyclInv-3D", "PermInv-6D"])
     parser.add_argument("acqf", type=str, choices=["ucb", "mvr"])
-    parser.add_argument("--devices", type=str, nargs="+", default=["0"])
+    parser.add_argument("--devices", type=str, nargs="*", default=[])
     args = parser.parse_args()
 
     # Experiment setup
@@ -218,12 +218,17 @@ if __name__ == "__main__":
     # Torch setup
     warnings.filterwarnings("ignore", category=InputDataWarning)
     torch.multiprocessing.set_start_method('spawn')
-    if args.devices == ["cpu"]:
-        raise NotImplementedError("Using the CPU is not enabled.")
-    devices = [torch.device(device) for device in args.devices]
+    devices = [
+        torch.device(device)
+        if device is not None and device != "cpu"
+        else None 
+        for device in args.devices
+    ]   
     if len(devices) != len(eval_kernels):
-        raise ValueError("Number of devices must be equal to the number of kernels")
-    
+        devices += [None]*(len(eval_kernels) - len(devices))
+        InsufficientDevicesWarning = f"Number of devices does not match number of kernels. Using CPU for kernels {eval_kernels[len(args.devices):]}."
+        warnings.warn(InsufficientDevicesWarning)
+        
     # Run experiments
     for repeat in range(repeats):
         run_configs = [
