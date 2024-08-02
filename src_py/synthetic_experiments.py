@@ -1,6 +1,6 @@
 import argparse
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import gpytorch
 import h5py
@@ -23,7 +23,7 @@ from transformation_groups import (
 )
 
 
-def get_kernel(label, device, dtype):
+def get_kernel(label, device, dtype, **kwargs):
     base_kernel = gpytorch.kernels.MaternKernel(nu=2.5)
     # Fix lengthscale
     base_kernel.lengthscale = torch.tensor([0.12], device=device, dtype=dtype)
@@ -49,6 +49,16 @@ def get_kernel(label, device, dtype):
             base_kernel=base_kernel,
             transformations=lambda x: block_permutation_group(x, 3),
         )
+    elif label == "quasi_permutation_invariant":
+        invariant_base_kernel = InvariantKernel(
+            base_kernel=base_kernel,
+            transformations=permutation_group,
+        )
+        noninvariant_base_kernel = gpytorch.kernels.ScaleKernel(base_kernel)
+        noninvariant_base_kernel.outputscale = torch.tensor([kwargs.get("noninvariant_scale", 0.1)], device=device, dtype=dtype)
+        noninvariant_base_kernel.raw_outputscale.requires_grad = False
+        return invariant_base_kernel + noninvariant_base_kernel
+        
     elif label == "standard":
         return base_kernel
     else:
@@ -77,6 +87,9 @@ class RunConfig:
     device: torch.device   
     dtype: torch.dtype = torch.float64
 
+    # Optional settings
+    objective_kernel_kwargs: dict = field(default_factory=lambda: {})  # Additional arguments for the objective kernel
+    eval_kernel_kwargs: dict  = field(default_factory=lambda: {})  # Additional arguments for the evaluation kernel
 
 def run(run_config: RunConfig):
     print(f"Running {run_config.output_group} on {run_config.device}")
@@ -84,13 +97,13 @@ def run(run_config: RunConfig):
     
     # Setup
     bounds = torch.tensor([[0., 1.] for _ in range(run_config.d)], device=run_config.device, dtype=run_config.dtype).T
-    kernel = get_kernel(run_config.eval_kernel, run_config.device, run_config.dtype)
+    kernel = get_kernel(run_config.eval_kernel, run_config.device, run_config.dtype, **run_config.eval_kernel_kwargs)
     
     # Generate objective function
     print("Generating objective...")
     f = create_synthetic_objective(
         d=run_config.d,
-        kernel=get_kernel(run_config.objective_kernel, run_config.device, run_config.dtype),
+        kernel=get_kernel(run_config.objective_kernel, run_config.device, run_config.dtype, **run_config.objective_kernel_kwargs),
         seed=run_config.objective_seed,
         n_initial_points=run_config.objective_n_init,
         device=run_config.device
@@ -174,7 +187,7 @@ def run(run_config: RunConfig):
 
 if __name__ == "__main__":   
     parser = argparse.ArgumentParser()
-    parser.add_argument("objective", type=str, choices=["PermInv-2D", "CyclInv-3D", "PermInv-6D"])
+    parser.add_argument("objective", type=str, choices=["PermInv-2D", "CyclInv-3D", "PermInv-6D", "QuasiPermInv-3D-0.1", "QuasiPermInv-3D-0.2"])
     parser.add_argument("acqf", type=str, choices=["ucb", "mvr"])
     parser.add_argument("--devices", type=str, nargs="*", default=[])
     args = parser.parse_args()
@@ -192,6 +205,8 @@ if __name__ == "__main__":
         acqf = args.acqf
         n_steps = [128, 128]
         output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
+        objective_kernel_kwargs = {}
+        eval_kernel_kwargs = {}
     elif args.objective == "CyclInv-3D":
         objective_kernel = "cyclic_invariant"
         objective_n_init = 256
@@ -203,6 +218,8 @@ if __name__ == "__main__":
         acqf = args.acqf
         n_steps = [256, 256]
         output_file = f"experiments/synthetic/data/cyclinv3d_{acqf}.h5"
+        objective_kernel_kwargs = {}
+        eval_kernel_kwargs = {}
     elif args.objective == "PermInv-6D":
         objective_kernel = "permutation_invariant"
         objective_n_init = 512
@@ -214,7 +231,35 @@ if __name__ == "__main__":
         acqf = args.acqf
         n_steps = [640, 640, 640, 200]
         output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
-
+        objective_kernel_kwargs = {}
+        eval_kernel_kwargs = {}
+    elif args.objective == "QuasiPermInv-3D-0.1":
+        objective_kernel = "quasi_permutation_invariant"
+        objective_n_init = 256
+        objective_seed = 0
+        noise_var = 0.01
+        d = 3
+        repeats = 32
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        acqf = args.acqf
+        n_steps = [256, 256, 256]
+        output_file = f"experiments/synthetic/data/quasiperminv3d_0.1_{acqf}.h5"
+        objective_kernel_kwargs = {"noninvariant_scale": 0.1}
+        eval_kernel_kwargs = {"noninvariant_scale": 0.1}
+    elif args.objective == "QuasiPermInv-3D-0.2":
+        objective_kernel = "quasi_permutation_invariant"
+        objective_n_init = 256
+        objective_seed = 0
+        noise_var = 0.01
+        d = 3
+        repeats = 32
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        acqf = args.acqf
+        n_steps = [256, 256, 256]
+        output_file = f"experiments/synthetic/data/quasiperminv3d_0.2_{acqf}.h5"
+        objective_kernel_kwargs = {"noninvariant_scale": 0.2}
+        eval_kernel_kwargs = {"noninvariant_scale": 0.2}
+        
     # Torch setup
     warnings.filterwarnings("ignore", category=InputDataWarning)
     torch.multiprocessing.set_start_method('spawn')
@@ -244,7 +289,9 @@ if __name__ == "__main__":
                 n_steps=n_steps_i,
                 output_file=output_file,
                 output_group=f"{eval_kernel}/{repeat}",
-                device=device,            
+                device=device, 
+                objective_kernel_kwargs=objective_kernel_kwargs,
+                eval_kernel_kwargs=eval_kernel_kwargs,           
             )
             for eval_kernel, n_steps_i, device in zip(eval_kernels, n_steps, devices)
         ]
