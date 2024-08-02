@@ -1,17 +1,26 @@
-import torch
+import argparse
+import warnings
+from dataclasses import dataclass
+
 import gpytorch
+import h5py
+import torch
+import torch.multiprocessing.pool
+from botorch.acquisition import (
+    PosteriorMean,
+    PosteriorStandardDeviation,
+    UpperConfidenceBound,
+)
+from botorch.exceptions import InputDataWarning
 from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf
-from botorch.acquisition import UpperConfidenceBound, PosteriorStandardDeviation, PosteriorMean
-import warnings
-from botorch.exceptions import InputDataWarning
-import h5py
-import argparse
-import torch.multiprocessing.pool
-from dataclasses import dataclass
 from invariant_kernel import InvariantKernel
 from synthetic_objective import create_synthetic_objective
-from transformation_groups import permutation_group, block_permutation_group, cyclic_group
+from transformation_groups import (
+    block_permutation_group,
+    cyclic_group,
+    permutation_group,
+)
 
 
 def get_kernel(label, device, dtype):
@@ -182,7 +191,7 @@ if __name__ == "__main__":
         eval_kernels = ["standard", "permutation_invariant"]
         acqf = args.acqf
         n_steps = [128, 128]
-        output_file = f"perminv2d_{acqf}.h5"
+        output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
     elif args.objective == "CyclInv-3D":
         objective_kernel = "cyclic_invariant"
         objective_n_init = 256
@@ -193,7 +202,7 @@ if __name__ == "__main__":
         eval_kernels = ["standard", "cyclic_invariant"]
         acqf = args.acqf
         n_steps = [256, 256]
-        output_file = f"cyclinv3d_{acqf}.h5"
+        output_file = f"experiments/synthetic/data/cyclinv3d_{acqf}.h5"
     elif args.objective == "PermInv-6D":
         objective_kernel = "permutation_invariant"
         objective_n_init = 512
@@ -204,7 +213,7 @@ if __name__ == "__main__":
         eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant"]
         acqf = args.acqf
         n_steps = [640, 640, 640, 200]
-        output_file = f"perminv6d_{acqf}.h5"
+        output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
 
     # Torch setup
     warnings.filterwarnings("ignore", category=InputDataWarning)
@@ -213,8 +222,7 @@ if __name__ == "__main__":
     if len(devices) != len(eval_kernels):
         raise ValueError("Number of devices must be equal to the number of kernels")
     
-    
-    
+    # Run experiments
     for repeat in range(repeats):
         run_configs = [
             RunConfig(
