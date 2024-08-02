@@ -34,11 +34,11 @@ auto-play-media: true
   - Mathematical invariance 
 - Invariant Gaussian processes
 - Information gain and regret analysis
-- Application: design of fusion reactors
-- What next?
+- Application: fusion reactor design
+- Open questions
 :::
 
-# Optimisation is everywhere {background-color="#40666e"}
+# Optimisation is everywhere {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
 
 ## Optimisation is everywhere
 
@@ -101,7 +101,8 @@ For real-world applications, we need:
 *Example: converging a fusion plasma simulation to steady-state operating condition takes around 4 hours on HPC!*
 :::
 
-# Gaussian processes for Bayesian optimisation {background-color="#40666e"}
+# Gaussian processes for Bayesian optimisation {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
+
 
 ## Gaussian processes for Bayesian optimisation
 ### Sample efficient global optimisation
@@ -111,25 +112,20 @@ For real-world applications, we need:
 - Central idea: choose next candidate $x_{t+1}$ based on all previously observed candidates
 $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^t$
   - Requires model to predict $f(x_{t+1}) \ | \ x_{t+1},\  \mathcal{D}$
-  - How do we balance exploration and exploitation?
-  - Requires a notion of [uncertainty]{.alert}
 :::
 
 ## Gaussian processes for Bayesian optimisation
 ### Gaussian processes as distributions over functions
 
-::: {.fragment .callout-tip title="Definition: Gaussian process"}
+::: {.fragment .callout-note title="Definition: Gaussian process"}
 A Gaussian process with mean function $m : \mathcal{X} \to \mathbb{R}$ and kernel $k: \mathcal{X} \times \mathcal{X} \to \mathbb{R}$ can be viewed as a distribution over functions $f: \mathcal{X} \to \mathbb{R}$:
 $$
-\begin{equation}
 f \sim \mathcal{GP}\left(m(\cdot), k(\cdot, \cdot)\right).
-\end{equation}
 $$
 The GP gives a predictive distribution over $f(x_{t+1})$:
 $$
-\begin{equation}
+\color[RGB]{154,37,21}
 f(x_{t+1}) \ | \ \mathcal{D} \sim \mathcal{N}(\mu_t(x_{t+1}), \sigma^2_t(x_{t+1})), 
-\end{equation}
 $$
 with analytic forms for $\mu_t(x_{t+1})$ and $\sigma^2_t(x_{t+1})$ in terms of $m, k, \mathcal{D}$ and $x_{t+1}$.
 
@@ -141,33 +137,6 @@ For simplicity, we normally let $m = 0$ without loss of generality.
 :::
 
 ## Gaussian processes for Bayesian optimisation
-### Acquisition functions
-
-::: {.incremental}
-- Acquisition functions provide a criterion for [usefulness]{.alert}
-- Examples:
-  - Maximum variance reduction *(explore greedily)*
-    $$x_{t+1} = \arg \max_x \sigma_{t}(x)$$
-  - Upper confidence bound *(balance explore + exploit)* 
-    $$x_{t+1} = \arg \max_x \left(\mu_t(x) + \beta \sigma_t(x)\right)$$
-:::
-
-## Gaussian processes for Bayesian optimisation
-### Reporting rules and regret
-
-::: {.incremental}
-- Combine with a reporting rule at stopping time $T$
-  - Example: maximum posterior mean
-   $$\hat{x}_\mathrm{opt} = \arg \max_x \mu_T(x)$$
-- Performance of an algorithm quantified by *simple regret*
-$$
-    r_T = \arg \max_x f(x) - f(\hat{x}_\mathrm{opt})
-$$
-- Goal is to achieve $r_T \to 0$ as $T \to \infty$
-:::
-
-
-## Gaussian processes for Bayesian optimisation
 ### Example algorithm
 
 ::: {.absolute style="text-align:center;"}
@@ -177,17 +146,34 @@ $$
 ## Gaussian processes for Bayesian optimisation
 ### Gaussian processes and function spaces
 
-::: {.incremental}
+::: {.fragment}
 - Choice of kernel $k$ defines what kind of function can be represented *(smoothness, periodicity, ...)*
+:::
+::: {.fragment}
 - Examples:
-  - Matern
-  - Periodic
-- For best sample efficiency, choose a $k$ that captures [all prior information]{.alert} about $f$
-  - *Underlying structure*
+
+::: {layout-ncol=3 layout-valign="center"}
+  ![Matern-5/2](images/matern52.png)
+
+  ![Matern-1/2](images/matern12.png)
+
+  ![Periodic](images/periodic.png)
+:::
 :::
 
+## Gaussian processes for Bayesian optimisation
+### Gaussian processes and function spaces
+:::{.incremental}
+- $k$ defines a function space: [reproducing kernel Hilbert space]{.alert} $\mathcal{H}_k$
+- GP is a distribution over $f \in \mathcal{H}_k$
+- For best sample efficiency, choose a $k$ that captures [all prior information]{.alert} about $f$ [→ **represent underlying structure**]{.fragment .alert}
+:::
+:::{.fragment}
+*Intuition: $\mathcal{H}_k$ behaves like a hypothesis class*
+:::
 
-# Structure is everywhere {background-color="#40666e"}
+# Structure is everywhere {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
+
 
 ## Structure is everywhere  
 ### Physics, geometry, and identity
@@ -206,12 +192,372 @@ Transformation invariance in images
 :::
 ::::
 
+::: {.fragment .r-stack .alert}
+Exploiting invariance should give improvements in sample efficiency
+:::
+
+## What is invariance?
+### Invariance and sample efficiency
+
+::: {.incremental}
+- Key idea: [**making one observation gives additional information**]{.alert}
+- Examples:
+:::
+::: {layout-ncol=3 layout-valign="center"}
+  ![](images/permutation_group.png){.fragment}
+
+  ![](images/dihedral_group.png){.fragment}
+
+  ![](images/cyclic_group.png){.fragment}
+:::
 
 
 ## What is invariance?
+### Transformation groups
 
-- qux
+::: {.fragment}
+- Define a [group]{.alert} of transformations $G = \{ \sigma : \mathcal{X} \to \mathcal{X}\}$
+::: 
 
-## How can we encode invariance into GPs?
+::: {.fragment .callout-note title="Definition: Group"}
+A group is a set $G$ with an operation $\circ$ that satisfies:
 
-- baz
+- Associativity: $\quad(a \circ b) \circ c = a \circ (b \circ c) \quad \forall a, b, c \in G$
+- Identity:    $\quad\quad \exists\ e \in G \quad \mathrm{s.t. } \quad a \circ e = a \quad \forall a \in G$ 
+- Inverse: $\quad\quad a \in G \implies a^{-1} \in G$
+
+These properties ensure the group is *closed*.
+:::
+
+
+## What is invariance?
+### Group invariance
+
+::: {.fragment}
+- A function $f$ is invariant to $G$ if 
+  
+$$
+f(\sigma(x)) = f(x) \quad \forall \sigma \in G
+$$
+:::
+
+[*"Transforming the input has no effect on the value"*]{.fragment .alert .r-stack}
+
+## What is invariance?
+### Examples of groups
+
+::: {layout="[1, 1]" layout-valign="center"}
+![](images/permutation_group.png)
+
+::: {.center .fragment}
+**Permutation group**
+
+\begin{align}
+[x_1, x_2] &\to [x_1, x_2] \\
+[x_1, x_2] &\to [x_2, x_1]
+\end{align}
+:::
+:::
+
+## What is invariance?
+### Examples of groups
+
+::: {layout="[1, 1]" layout-valign="center"}
+![](images/dihedral_group.png)
+
+::: {.center .fragment}
+**Dihedral group**
+
+\begin{align}
+\boldsymbol{x} &\to \boldsymbol{x} \\
+\boldsymbol{x} &\to \boldsymbol{R}_1 \boldsymbol{x} \\
+&\vdots \\
+\boldsymbol{x} &\to \boldsymbol{R}_{2n -1} \boldsymbol{x}
+\end{align}
+:::
+:::
+
+
+## What is invariance?
+### Examples of groups
+
+::: {layout="[1, 1]" layout-valign="center"}
+![](images/cyclic_group.png)
+
+::: {.center .fragment}
+**Cyclic group**
+
+\begin{align}
+[x_1, x_2, x_3] &\to [x_1, x_2, x_3] \\
+[x_1, x_2, x_3] &\to [x_2, x_3, x_1] \\
+[x_1, x_2, x_3] &\to [x_3, x_1, x_2]
+\end{align}
+:::
+:::
+
+# Invariant Gaussian processes {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
+
+## Invariant Gaussian processes
+### Naive method
+
+::: {.incremental}
+- Key idea: [**making one observation gives additional information**]{.alert}
+- Why not try feature engineering?
+  - For each observed $x$, augment training data with $\sigma(x) \quad \forall \sigma \in G$
+- **Problem: computational cost of GP scales with $\mathcal{O}(|G|^3 n^3)$**
+- For groups of interest, $G$ can have hundreds of elements
+- [Can we do better?]{.alert}
+:::
+
+## Invariant Gaussian processes
+### Invariant kernels
+
+::: {.incremental}
+- Kernels can be viewed as quantifying the correlation between points $x_1$ and $x_2$
+- For a $G$-invariant function, behaviour at $x$ is identical to all transformed versions of $x$:
+$$
+k(x_1, x_2) = k(x_1, \sigma_1(x_2)) = k(x_1, \sigma_2(x_2)) = \dots
+$$
+:::
+
+::: {.fragment .callout-note title="Definition: totally invariant kernel"}
+A kernel $k$ is called *totally invariant* to $G$ if
+$$
+k(x, x') = k(\sigma_i(x), \sigma_j(y)) \quad \forall\ \sigma_i, \sigma_j \in G
+$$
+:::
+
+
+## Invariant Gaussian processes
+### Constructing an invariant kernel
+
+::: {.fragment}
+- We can construct an invariant kernel by "averaging" over all transformed points
+:::
+::: {.fragment}
+$$
+k_G(x, x') = \frac{1}{|G|} \sum_{\sigma \in G} k(\sigma(x), x)
+$$
+:::
+::: {.incremental}
+- This kernel defines an [RKHS of invariant functions]{.alert}
+  - *GPs with this kernel are distributions over invariant functions!*
+  - If we know our target function is $G$-invariant, use a $G$-invariant kernel
+- Cost reduced from $\mathcal{O}(|G|^3 n^3)$ to $\mathcal{O}(|G| n^3)$
+:::
+
+
+## Invariant Gaussian processes
+### Samples from GPs with invariant kernels
+
+::: {layout="[1, 1, 1]"  layout-valign="center"}
+![](images/dihedral_sample_1.png)
+
+![](images/dihedral_sample_2.png)
+
+![](images/dihedral_sample_3.png)
+:::
+
+# Information gain and regret analysis {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
+
+## Information gain and regret analysis
+### Bayesian optimisation with invariant GPs
+
+::: {layout="[1]"  layout-valign="center" width=100%}
+![](images/sample-efficiency.png)
+:::
+
+
+## Information gain and regret analysis
+### Key metric: maximum information gain
+
+::: {.incremental}
+- Let $I(y_{1:T};\ f(x_{1:T}))$ denote the [mutual information]{.alert} between the observed sequence $\{y_i\}_{i=1}^T$ and the unknown function values $\{f(x_i)\}_{i=1}^T$
+  - Quantifies the [reduction in uncertainty]{.alert} about $f(x_{1:T})$ from observing $y_{1:T}$
+- Maximum information gain $\gamma_T$ = $\sup_{x_{1:T}} I(y_{1:T};\ f(x_{1:T}))$ can be used to bound the regret of kernelised optimisation algorithms
+- Note: $\gamma_T$ is a property of the kernel only!
+:::
+
+## Information gain and regret analysis
+### MIG of invariant kernels
+::: {.incremental}
+- By analysing the spectral properties of the kernel, we can compute $\gamma_T$
+  - Rate of decay of eigenvalues determines $\gamma_T$
+- Invariant kernels have a collapsed eigenspace
+  - Eigendecomposition only contains symmetric harmonics
+  - Faster decay $\to$ [tighter information gain!]{.alert}
+:::
+::: {.fragment .callout-note title="Maximum information gain of invariant kernels"}
+The maximum information gain for a $G$-invariant kernel after $T$ rounds is bounded by
+\begin{align}
+    \gamma_T^G = \tilde{\mathcal{O}}\Big( {\color[RGB]{154,37,21}
+\tfrac{1}{|G|}} T^{\frac{d-1}{\beta_p^*}}\Big),
+\end{align}
+where $\tilde{\mathcal{O}}(\cdot)$ hides logarithmic factors.
+:::
+
+
+## Information gain and regret analysis
+### Regret for invariant GP-MVR
+
+- Using the maximum information gain, we can find the following upper bound on sample efficiency:
+
+::: {.fragment .callout-note title="Upper bound"}
+For GP-MVR with the Matern-$\nu$ kernel to achieve regret at most $\epsilon$ after $T$ steps,
+\begin{align}
+        T = \tilde{\mathcal{O}}\left(
+\left(
+    \tfrac{1}{|G|}
+\right)^\frac{2\nu + d -1}{2 \nu}
+\epsilon^{-\frac{2\nu + d -1}{\nu}}
+\right).
+\end{align}
+where $\tilde{\mathcal{O}}(\cdot)$ hides logarithmic factors.
+:::
+
+## Information gain and regret analysis
+### Regret for invariant GP-MVR
+
+::: {.increment}
+- To show that our upper bound is tight, we develop a lower bound
+  - Construct a function family that the algorithm must distinguish between
+  - For comparison with our upper bound, this must be done on $\mathbb{S}^d$ [but efficient function packing is an open problem!]{.fragment .alert}
+:::
+![](images/bumps_on_sphere_1.png){.fragment .absolute height="45%" left="15%" bottom="0%"}
+![](images/bumps_on_sphere_2.png){.fragment .absolute height="45%" right="15%" bottom="0%"}
+
+## Information gain and regret analysis
+### Regret for invariant GP-MVR
+
+- To show that our upper bound is tight, we develop a lower bound
+  - Construct a function family that the algorithm must distinguish between
+  - For comparison with our upper bound, this must be done on $\mathbb{S}^d$ [but efficient function packing is an open problem!]{.alert}
+
+::: {.callout-note title="Lower bound"}
+For GP-MVR with the Matern-$\nu$ kernel to achieve regret at most $\epsilon$ after $T$ steps,
+\begin{align}
+T = \Omega\left(
+    \left(\tfrac{1}{|G|}\right)^\frac{\nu + d-1}{\nu}
+    \epsilon^{-\frac{2\nu+d-1}{\nu}}
+    \right).
+\end{align}
+where $\tilde{\mathcal{O}}(\cdot)$ hides logarithmic factors.
+:::
+
+
+## Synthetic experiments
+### Invariant GP-MVR
+
+::: {layout="[1, 1, 1]"  layout-valign="center"}
+![](images/perminv2d_mvr_regret.png)
+
+![](images/cyclinv3d_mvr_regret.png)
+
+![](images/perminv6d_mvr_regret.png)
+:::
+
+## Computational cost
+:::{.incremental}
+- Although the cost is only $|G|$, this can still be expensive for big groups
+- Example: permutation group
+  - $|G| = 24$ for $d=4$, but $|G|=479\times10^6$ for $d=12$ (!)
+- Solution: [partial invariance]{.alert}
+:::
+::: {.fragment layout="[1, 1.3]"  layout-valign="center"}
+![](images/perminv6d_mvr_regret.png)
+
+![](images/benchmark.png)
+:::
+
+
+# Application: fusion reactor design{background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
+
+## Application: fusion reactor design
+### Plasma profiles
+
+::: {.columns}
+::: {.column width="35%"}
+![](images/plasma_equilibrium.png){.absolute height="75%"}
+:::
+
+:::{.column width="65%"}
+- Many plasma properties are treated as 1D functions of radius, or [profiles]{.alert}
+  
+- One important example is the [safety factor]{.alert}, $q$
+
+![](images/q2.png)
+:::
+:::
+:::
+:::
+
+## Application: fusion reactor design
+### Plasma profiles
+
+::: {.columns}
+::: {.column width="35%"}
+![](images/plasma_equilibrium.png){.absolute height="75%"}
+:::
+
+:::{.column width="65%"}
+- Many plasma properties are treated as 1D functions of radius, or [profiles]{.alert}
+  
+- One important example is the [safety factor]{.alert}, $q$
+
+![](images/q4.png)
+
+:::
+:::
+:::
+
+
+## Application: fusion reactor design
+### Safety factor optimisation
+
+::: {.fragment}
+- Safety factor can be controlled by auxiliary current drive system, [ECRH]{.alert}
+  - Drives current in a fixed region
+:::
+::: {.fragment}
+- Optimisation task: [**find an ECRH targeting setup that maximises performance of safety factor profile**]{.alert}
+:::
+::: {.fragment}
+![](images/ecrh_profile.png){.absolute height="45%" left="25%" bottom="1%"}
+:::
+
+## Application: fusion reactor design
+### Safety factor optimisation
+
+Optimisation task: [**find an ECRH targeting setup that maximises performance of safety factor profile**]{.alert}
+
+::: {.incremental}
+- $N$ ECRH launchers with same amplitudes and widths
+- Input $x \in \mathbb{R}^N$ sets the targeting location of the launchers
+- This task exhibits [permutation invariance]{.alert}!
+  - Can swap locations of launchers in $x$
+  - Output of $[x_1, x_2, x_3]$ is the same as $[x_1, x_3, x_1]$
+:::
+
+## Application: fusion reactor design
+### Safety factor optimisation
+
+- Using an invariant kernel allows us to find better solutions
+
+::: {.fragment}
+![Showing mean of 5 runs. Unconverged simulations cause error bars to uninformative.](images/safety_factor_progress.png){height=400}
+:::
+
+# Open questions {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}
+## Open questions
+
+::: {.incremental}
+- Can we get a tighter lower bound?
+  - Would require development of a new class of proof
+- Non-isotropic kernels require a double sum, $$ k_G(x, x') = \sum_{\sigma \in G} \sum_{\tau \in G} k(\sigma(x), \tau(x')).$$
+  - Computational cost $|G|^2$
+  - Are there other approximations we could make?
+  - Example: random subgroup selection
+- Can we get regret bounds for subgroup-invariant kernels?
+:::
+
+# {background-color="#dfeaec" background-image="images/gp.png" background-opacity=0.2}

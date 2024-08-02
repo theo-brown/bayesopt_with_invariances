@@ -384,13 +384,13 @@ Ilija Bogunovic
 </ul></li>
 <li class="fragment">Invariant Gaussian processes</li>
 <li class="fragment">Information gain and regret analysis</li>
-<li class="fragment">Application: design of fusion reactors</li>
-<li class="fragment">What next?</li>
+<li class="fragment">Application: fusion reactor design</li>
+<li class="fragment">Open questions</li>
 </ul>
 </div>
 </section>
 <section>
-<section id="optimisation-is-everywhere" class="title-slide slide level1 center" data-background-color="#40666e">
+<section id="optimisation-is-everywhere" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
 <h1>Optimisation is everywhere</h1>
 
 </section>
@@ -512,7 +512,7 @@ Ilija Bogunovic
 </div>
 </section></section>
 <section>
-<section id="gaussian-processes-for-bayesian-optimisation" class="title-slide slide level1 center" data-background-color="#40666e">
+<section id="gaussian-processes-for-bayesian-optimisation" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
 <h1>Gaussian processes for Bayesian optimisation</h1>
 
 </section>
@@ -525,8 +525,6 @@ Ilija Bogunovic
 <li class="fragment">Central idea: choose next candidate <span class="math inline">\(x_{t+1}\)</span> based on all previously observed candidates <span class="math inline">\(\mathcal{D} = \{(x_i, y_i)\}_{i=1}^t\)</span>
 <ul>
 <li class="fragment">Requires model to predict <span class="math inline">\(f(x_{t+1}) \ | \ x_{t+1},\  \mathcal{D}\)</span></li>
-<li class="fragment">How do we balance exploration and exploitation?</li>
-<li class="fragment">Requires a notion of <span class="alert">uncertainty</span></li>
 </ul></li>
 </ul>
 </div>
@@ -535,7 +533,7 @@ Ilija Bogunovic
 <h2>Gaussian processes for Bayesian optimisation</h2>
 <h3 id="gaussian-processes-as-distributions-over-functions">Gaussian processes as distributions over functions</h3>
 <div class="fragment" title="Definition: Gaussian process">
-<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout callout-note callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
 <div class="callout-icon-container">
@@ -545,13 +543,10 @@ Ilija Bogunovic
 </div>
 <div class="callout-content">
 <p>A Gaussian process with mean function <span class="math inline">\(m : \mathcal{X} \to \mathbb{R}\)</span> and kernel <span class="math inline">\(k: \mathcal{X} \times \mathcal{X} \to \mathbb{R}\)</span> can be viewed as a distribution over functions <span class="math inline">\(f: \mathcal{X} \to \mathbb{R}\)</span>: <span class="math display">\[
-\begin{equation}
 f \sim \mathcal{GP}\left(m(\cdot), k(\cdot, \cdot)\right).
-\end{equation}
 \]</span> The GP gives a predictive distribution over <span class="math inline">\(f(x_{t+1})\)</span>: <span class="math display">\[
-\begin{equation}
+\color[RGB]{154,37,21}
 f(x_{t+1}) \ | \ \mathcal{D} \sim \mathcal{N}(\mu_t(x_{t+1}), \sigma^2_t(x_{t+1})),
-\end{equation}
 \]</span> with analytic forms for <span class="math inline">\(\mu_t(x_{t+1})\)</span> and <span class="math inline">\(\sigma^2_t(x_{t+1})\)</span> in terms of <span class="math inline">\(m, k, \mathcal{D}\)</span> and <span class="math inline">\(x_{t+1}\)</span>.</p>
 <p>For simplicity, we normally let <span class="math inline">\(m = 0\)</span> without loss of generality.</p>
 </div>
@@ -566,61 +561,72 @@ f(x_{t+1}) \ | \ \mathcal{D} \sim \mathcal{N}(\mu_t(x_{t+1}), \sigma^2_t(x_{t+1}
 </section>
 <section id="gaussian-processes-for-bayesian-optimisation-3" class="slide level2">
 <h2>Gaussian processes for Bayesian optimisation</h2>
-<h3 id="acquisition-functions">Acquisition functions</h3>
-<div>
-<ul>
-<li class="fragment">Acquisition functions provide a criterion for <span class="alert">usefulness</span></li>
-<li class="fragment">Examples:
-<ul>
-<li class="fragment">Maximum variance reduction <em>(explore greedily)</em> <span class="math display">\[x_{t+1} = \arg \max_x \sigma_{t}(x)\]</span></li>
-<li class="fragment">Upper confidence bound <em>(balance explore + exploit)</em> <span class="math display">\[x_{t+1} = \arg \max_x \left(\mu_t(x) + \beta \sigma_t(x)\right)\]</span></li>
-</ul></li>
-</ul>
-</div>
-</section>
-<section id="gaussian-processes-for-bayesian-optimisation-4" class="slide level2">
-<h2>Gaussian processes for Bayesian optimisation</h2>
-<h3 id="reporting-rules-and-regret">Reporting rules and regret</h3>
-<div>
-<ul>
-<li class="fragment">Combine with a reporting rule at stopping time <span class="math inline">\(T\)</span>
-<ul>
-<li class="fragment">Example: maximum posterior mean <span class="math display">\[\hat{x}_\mathrm{opt} = \arg \max_x \mu_T(x)\]</span></li>
-</ul></li>
-<li class="fragment">Performance of an algorithm quantified by <em>simple regret</em> <span class="math display">\[
-  r_T = \arg \max_x f(x) - f(\hat{x}_\mathrm{opt})
-\]</span></li>
-<li class="fragment">Goal is to achieve <span class="math inline">\(r_T \to 0\)</span> as <span class="math inline">\(T \to \infty\)</span></li>
-</ul>
-</div>
-</section>
-<section id="gaussian-processes-for-bayesian-optimisation-5" class="slide level2">
-<h2>Gaussian processes for Bayesian optimisation</h2>
 <h3 id="example-algorithm">Example algorithm</h3>
 <div class="absolute" style="text-align:center;">
 <p><img data-src="images/mvr.png" style="width:70.0%"></p>
 </div>
 </section>
-<section id="gaussian-processes-for-bayesian-optimisation-6" class="slide level2">
+<section id="gaussian-processes-for-bayesian-optimisation-4" class="slide level2">
 <h2>Gaussian processes for Bayesian optimisation</h2>
 <h3 id="gaussian-processes-and-function-spaces">Gaussian processes and function spaces</h3>
+<div class="fragment">
+<ul>
+<li>Choice of kernel <span class="math inline">\(k\)</span> defines what kind of function can be represented <em>(smoothness, periodicity, …)</em></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Examples:</li>
+</ul>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="3">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="images/matern52.png"></p>
+<figcaption>Matern-5/2</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="images/matern12.png"></p>
+<figcaption>Matern-1/2</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="images/periodic.png"></p>
+<figcaption>Periodic</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="gaussian-processes-for-bayesian-optimisation-5" class="slide level2">
+<h2>Gaussian processes for Bayesian optimisation</h2>
+<h3 id="gaussian-processes-and-function-spaces-1">Gaussian processes and function spaces</h3>
 <div>
 <ul>
-<li class="fragment">Choice of kernel <span class="math inline">\(k\)</span> defines what kind of function can be represented <em>(smoothness, periodicity, …)</em></li>
-<li class="fragment">Examples:
-<ul>
-<li class="fragment">Matern</li>
-<li class="fragment">Periodic</li>
-</ul></li>
-<li class="fragment">For best sample efficiency, choose a <span class="math inline">\(k\)</span> that captures <span class="alert">all prior information</span> about <span class="math inline">\(f\)</span>
-<ul>
-<li class="fragment"><em>Underlying structure</em></li>
-</ul></li>
+<li class="fragment"><span class="math inline">\(k\)</span> defines a function space: <span class="alert">reproducing kernel Hilbert space</span> <span class="math inline">\(\mathcal{H}_k\)</span></li>
+<li class="fragment">GP is a distribution over <span class="math inline">\(f \in \mathcal{H}_k\)</span></li>
+<li class="fragment">For best sample efficiency, choose a <span class="math inline">\(k\)</span> that captures <span class="alert">all prior information</span> about <span class="math inline">\(f\)</span> <span class="fragment alert">→ <strong>represent underlying structure</strong></span></li>
 </ul>
+</div>
+<div class="fragment">
+<p><em>Intuition: <span class="math inline">\(\mathcal{H}_k\)</span> behaves like a hypothesis class</em></p>
 </div>
 </section></section>
 <section>
-<section id="structure-is-everywhere" class="title-slide slide level1 center" data-background-color="#40666e">
+<section id="structure-is-everywhere" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
 <h1>Structure is everywhere</h1>
 
 </section>
@@ -636,24 +642,546 @@ f(x_{t+1}) \ | \ \mathcal{D} \sim \mathcal{N}(\mu_t(x_{t+1}), \sigma^2_t(x_{t+1}
 <p><img data-src="images/cat_transformed.png"></p>
 </div>
 </div>
+<div class="fragment r-stack alert">
+<p>Exploiting invariance should give improvements in sample efficiency</p>
+</div>
 </section>
 <section id="what-is-invariance" class="slide level2">
 <h2>What is invariance?</h2>
+<h3 id="invariance-and-sample-efficiency">Invariance and sample efficiency</h3>
+<div>
 <ul>
-<li>qux</li>
+<li class="fragment">Key idea: <span class="alert"><strong>making one observation gives additional information</strong></span></li>
+<li class="fragment">Examples:</li>
 </ul>
+</div>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="3">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/permutation_group.png" class="fragment"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/dihedral_group.png" class="fragment"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/cyclic_group.png" class="fragment"></p>
+</div>
+</div>
+</div>
 </section>
-<section id="how-can-we-encode-invariance-into-gps" class="slide level2">
-<h2>How can we encode invariance into GPs?</h2>
+<section id="what-is-invariance-1" class="slide level2">
+<h2>What is invariance?</h2>
+<h3 id="transformation-groups">Transformation groups</h3>
+<div class="fragment">
 <ul>
-<li>baz</li>
+<li>Define a <span class="alert">group</span> of transformations <span class="math inline">\(G = \{ \sigma : \mathcal{X} \to \mathcal{X}\}\)</span></li>
 </ul>
+</div>
+<div class="fragment" title="Definition: Group">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Definition: Group</strong></p>
+</div>
+<div class="callout-content">
+<p>A group is a set <span class="math inline">\(G\)</span> with an operation <span class="math inline">\(\circ\)</span> that satisfies:</p>
+<ul>
+<li>Associativity: <span class="math inline">\(\quad(a \circ b) \circ c = a \circ (b \circ c) \quad \forall a, b, c \in G\)</span></li>
+<li>Identity: <span class="math inline">\(\quad\quad \exists\ e \in G \quad \mathrm{s.t. } \quad a \circ e = a \quad \forall a \in G\)</span></li>
+<li>Inverse: <span class="math inline">\(\quad\quad a \in G \implies a^{-1} \in G\)</span></li>
+</ul>
+<p>These properties ensure the group is <em>closed</em>.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="what-is-invariance-2" class="slide level2">
+<h2>What is invariance?</h2>
+<h3 id="group-invariance">Group invariance</h3>
+<div class="fragment">
+<ul>
+<li>A function <span class="math inline">\(f\)</span> is invariant to <span class="math inline">\(G\)</span> if</li>
+</ul>
+<p><span class="math display">\[
+f(\sigma(x)) = f(x) \quad \forall \sigma \in G
+\]</span></p>
+</div>
+<p><span class="fragment alert r-stack"><em>“Transforming the input has no effect on the value”</em></span></p>
+</section>
+<section id="what-is-invariance-3" class="slide level2">
+<h2>What is invariance?</h2>
+<h3 id="examples-of-groups">Examples of groups</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[1, 1]">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img data-src="images/permutation_group.png"></p>
+</div>
+<div class="center fragment quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><strong>Permutation group</strong></p>
+<p><span class="math display">\[\begin{align}
+[x_1, x_2] &amp;\to [x_1, x_2] \\
+[x_1, x_2] &amp;\to [x_2, x_1]
+\end{align}\]</span></p>
+</div>
+</div>
+</div>
+</section>
+<section id="what-is-invariance-4" class="slide level2">
+<h2>What is invariance?</h2>
+<h3 id="examples-of-groups-1">Examples of groups</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[1, 1]">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img data-src="images/dihedral_group.png"></p>
+</div>
+<div class="center fragment quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><strong>Dihedral group</strong></p>
+<p><span class="math display">\[\begin{align}
+\boldsymbol{x} &amp;\to \boldsymbol{x} \\
+\boldsymbol{x} &amp;\to \boldsymbol{R}_1 \boldsymbol{x} \\
+&amp;\vdots \\
+\boldsymbol{x} &amp;\to \boldsymbol{R}_{2n -1} \boldsymbol{x}
+\end{align}\]</span></p>
+</div>
+</div>
+</div>
+</section>
+<section id="what-is-invariance-5" class="slide level2">
+<h2>What is invariance?</h2>
+<h3 id="examples-of-groups-2">Examples of groups</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[1, 1]">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p><img data-src="images/cyclic_group.png"></p>
+</div>
+<div class="center fragment quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><strong>Cyclic group</strong></p>
+<p><span class="math display">\[\begin{align}
+[x_1, x_2, x_3] &amp;\to [x_1, x_2, x_3] \\
+[x_1, x_2, x_3] &amp;\to [x_2, x_3, x_1] \\
+[x_1, x_2, x_3] &amp;\to [x_3, x_1, x_2]
+\end{align}\]</span></p>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="invariant-gaussian-processes" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
+<h1>Invariant Gaussian processes</h1>
+
+</section>
+<section id="invariant-gaussian-processes-1" class="slide level2">
+<h2>Invariant Gaussian processes</h2>
+<h3 id="naive-method">Naive method</h3>
+<div>
+<ul>
+<li class="fragment">Key idea: <span class="alert"><strong>making one observation gives additional information</strong></span></li>
+<li class="fragment">Why not try feature engineering?
+<ul>
+<li class="fragment">For each observed <span class="math inline">\(x\)</span>, augment training data with <span class="math inline">\(\sigma(x) \quad \forall \sigma \in G\)</span></li>
+</ul></li>
+<li class="fragment"><strong>Problem: computational cost of GP scales with <span class="math inline">\(\mathcal{O}(|G|^3 n^3)\)</span></strong></li>
+<li class="fragment">For groups of interest, <span class="math inline">\(G\)</span> can have hundreds of elements</li>
+<li class="fragment"><span class="alert">Can we do better?</span></li>
+</ul>
+</div>
+</section>
+<section id="invariant-gaussian-processes-2" class="slide level2">
+<h2>Invariant Gaussian processes</h2>
+<h3 id="invariant-kernels">Invariant kernels</h3>
+<div>
+<ul>
+<li class="fragment">Kernels can be viewed as quantifying the correlation between points <span class="math inline">\(x_1\)</span> and <span class="math inline">\(x_2\)</span></li>
+<li class="fragment">For a <span class="math inline">\(G\)</span>-invariant function, behaviour at <span class="math inline">\(x\)</span> is identical to all transformed versions of <span class="math inline">\(x\)</span>: <span class="math display">\[
+k(x_1, x_2) = k(x_1, \sigma_1(x_2)) = k(x_1, \sigma_2(x_2)) = \dots
+\]</span></li>
+</ul>
+</div>
+<div class="fragment" title="Definition: totally invariant kernel">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Definition: totally invariant kernel</strong></p>
+</div>
+<div class="callout-content">
+<p>A kernel <span class="math inline">\(k\)</span> is called <em>totally invariant</em> to <span class="math inline">\(G\)</span> if <span class="math display">\[
+k(x, x') = k(\sigma_i(x), \sigma_j(y)) \quad \forall\ \sigma_i, \sigma_j \in G
+\]</span></p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="invariant-gaussian-processes-3" class="slide level2">
+<h2>Invariant Gaussian processes</h2>
+<h3 id="constructing-an-invariant-kernel">Constructing an invariant kernel</h3>
+<div class="fragment">
+<ul>
+<li>We can construct an invariant kernel by “averaging” over all transformed points</li>
+</ul>
+</div>
+<div class="fragment">
+<p><span class="math display">\[
+k_G(x, x') = \frac{1}{|G|} \sum_{\sigma \in G} k(\sigma(x), x)
+\]</span></p>
+</div>
+<div>
+<ul>
+<li class="fragment">This kernel defines an <span class="alert">RKHS of invariant functions</span>
+<ul>
+<li class="fragment"><em>GPs with this kernel are distributions over invariant functions!</em></li>
+<li class="fragment">If we know our target function is <span class="math inline">\(G\)</span>-invariant, use a <span class="math inline">\(G\)</span>-invariant kernel</li>
+</ul></li>
+<li class="fragment">Cost reduced from <span class="math inline">\(\mathcal{O}(|G|^3 n^3)\)</span> to <span class="math inline">\(\mathcal{O}(|G| n^3)\)</span></li>
+</ul>
+</div>
+</section>
+<section id="invariant-gaussian-processes-4" class="slide level2">
+<h2>Invariant Gaussian processes</h2>
+<h3 id="samples-from-gps-with-invariant-kernels">Samples from GPs with invariant kernels</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[1, 1, 1]">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/dihedral_sample_1.png"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/dihedral_sample_2.png"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/dihedral_sample_3.png"></p>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="information-gain-and-regret-analysis" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
+<h1>Information gain and regret analysis</h1>
+
+</section>
+<section id="information-gain-and-regret-analysis-1" class="slide level2">
+<h2>Information gain and regret analysis</h2>
+<h3 id="bayesian-optimisation-with-invariant-gps">Bayesian optimisation with invariant GPs</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[1]" width="100%">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><img data-src="images/sample-efficiency.png"></p>
+</div>
+</div>
+</div>
+</section>
+<section id="information-gain-and-regret-analysis-2" class="slide level2">
+<h2>Information gain and regret analysis</h2>
+<h3 id="key-metric-maximum-information-gain">Key metric: maximum information gain</h3>
+<div>
+<ul>
+<li class="fragment">Let <span class="math inline">\(I(y_{1:T};\ f(x_{1:T}))\)</span> denote the <span class="alert">mutual information</span> between the observed sequence <span class="math inline">\(\{y_i\}_{i=1}^T\)</span> and the unknown function values <span class="math inline">\(\{f(x_i)\}_{i=1}^T\)</span>
+<ul>
+<li class="fragment">Quantifies the <span class="alert">reduction in uncertainty</span> about <span class="math inline">\(f(x_{1:T})\)</span> from observing <span class="math inline">\(y_{1:T}\)</span></li>
+</ul></li>
+<li class="fragment">Maximum information gain <span class="math inline">\(\gamma_T\)</span> = <span class="math inline">\(\sup_{x_{1:T}} I(y_{1:T};\ f(x_{1:T}))\)</span> can be used to bound the regret of kernelised optimisation algorithms</li>
+<li class="fragment">Note: <span class="math inline">\(\gamma_T\)</span> is a property of the kernel only!</li>
+</ul>
+</div>
+</section>
+<section id="information-gain-and-regret-analysis-3" class="slide level2">
+<h2>Information gain and regret analysis</h2>
+<h3 id="mig-of-invariant-kernels">MIG of invariant kernels</h3>
+<div>
+<ul>
+<li class="fragment">By analysing the spectral properties of the kernel, we can compute <span class="math inline">\(\gamma_T\)</span>
+<ul>
+<li class="fragment">Rate of decay of eigenvalues determines <span class="math inline">\(\gamma_T\)</span></li>
+</ul></li>
+<li class="fragment">Invariant kernels have a collapsed eigenspace
+<ul>
+<li class="fragment">Eigendecomposition only contains symmetric harmonics</li>
+<li class="fragment">Faster decay <span class="math inline">\(\to\)</span> <span class="alert">tighter information gain!</span></li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment" title="Maximum information gain of invariant kernels">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Maximum information gain of invariant kernels</strong></p>
+</div>
+<div class="callout-content">
+<p>The maximum information gain for a <span class="math inline">\(G\)</span>-invariant kernel after <span class="math inline">\(T\)</span> rounds is bounded by <span class="math display">\[\begin{align}
+    \gamma_T^G = \tilde{\mathcal{O}}\Big( {\color[RGB]{154,37,21}
+\tfrac{1}{|G|}} T^{\frac{d-1}{\beta_p^*}}\Big),
+\end{align}\]</span> where <span class="math inline">\(\tilde{\mathcal{O}}(\cdot)\)</span> hides logarithmic factors.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="information-gain-and-regret-analysis-4" class="slide level2">
+<h2>Information gain and regret analysis</h2>
+<h3 id="regret-for-invariant-gp-mvr">Regret for invariant GP-MVR</h3>
+<ul>
+<li>Using the maximum information gain, we can find the following upper bound on sample efficiency:</li>
+</ul>
+<div class="fragment" title="Upper bound">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Upper bound</strong></p>
+</div>
+<div class="callout-content">
+<p>For GP-MVR with the Matern-<span class="math inline">\(\nu\)</span> kernel to achieve regret at most <span class="math inline">\(\epsilon\)</span> after <span class="math inline">\(T\)</span> steps, <span class="math display">\[\begin{align}
+        T = \tilde{\mathcal{O}}\left(
+\left(
+    \tfrac{1}{|G|}
+\right)^\frac{2\nu + d -1}{2 \nu}
+\epsilon^{-\frac{2\nu + d -1}{\nu}}
+\right).
+\end{align}\]</span> where <span class="math inline">\(\tilde{\mathcal{O}}(\cdot)\)</span> hides logarithmic factors.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="information-gain-and-regret-analysis-5" class="slide level2">
+<h2>Information gain and regret analysis</h2>
+<h3 id="regret-for-invariant-gp-mvr-1">Regret for invariant GP-MVR</h3>
+<div class="increment">
+<ul>
+<li>To show that our upper bound is tight, we develop a lower bound
+<ul>
+<li>Construct a function family that the algorithm must distinguish between</li>
+<li>For comparison with our upper bound, this must be done on <span class="math inline">\(\mathbb{S}^d\)</span> <span class="fragment alert">but efficient function packing is an open problem!</span></li>
+</ul></li>
+</ul>
+</div>
+<p><img data-src="images/bumps_on_sphere_1.png" class="fragment absolute" style="left: 15%; bottom: 0%; height: 45%; "> <img data-src="images/bumps_on_sphere_2.png" class="fragment absolute" style="bottom: 0%; right: 15%; height: 45%; "></p>
+</section>
+<section id="information-gain-and-regret-analysis-6" class="slide level2">
+<h2>Information gain and regret analysis</h2>
+<h3 id="regret-for-invariant-gp-mvr-2">Regret for invariant GP-MVR</h3>
+<ul>
+<li>To show that our upper bound is tight, we develop a lower bound
+<ul>
+<li>Construct a function family that the algorithm must distinguish between</li>
+<li>For comparison with our upper bound, this must be done on <span class="math inline">\(\mathbb{S}^d\)</span> <span class="alert">but efficient function packing is an open problem!</span></li>
+</ul></li>
+</ul>
+<div title="Lower bound">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Lower bound</strong></p>
+</div>
+<div class="callout-content">
+<p>For GP-MVR with the Matern-<span class="math inline">\(\nu\)</span> kernel to achieve regret at most <span class="math inline">\(\epsilon\)</span> after <span class="math inline">\(T\)</span> steps, <span class="math display">\[\begin{align}
+T = \Omega\left(
+    \left(\tfrac{1}{|G|}\right)^\frac{\nu + d-1}{\nu}
+    \epsilon^{-\frac{2\nu+d-1}{\nu}}
+    \right).
+\end{align}\]</span> where <span class="math inline">\(\tilde{\mathcal{O}}(\cdot)\)</span> hides logarithmic factors.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="synthetic-experiments" class="slide level2">
+<h2>Synthetic experiments</h2>
+<h3 id="invariant-gp-mvr">Invariant GP-MVR</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[1, 1, 1]">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/perminv2d_mvr_regret.png"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/cyclinv3d_mvr_regret.png"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<p><img data-src="images/perminv6d_mvr_regret.png"></p>
+</div>
+</div>
+</div>
+</section>
+<section id="computational-cost" class="slide level2">
+<h2>Computational cost</h2>
+<div>
+<ul>
+<li class="fragment">Although the cost is only <span class="math inline">\(|G|\)</span>, this can still be expensive for big groups</li>
+<li class="fragment">Example: permutation group
+<ul>
+<li class="fragment"><span class="math inline">\(|G| = 24\)</span> for <span class="math inline">\(d=4\)</span>, but <span class="math inline">\(|G|=479\times10^6\)</span> for <span class="math inline">\(d=12\)</span> (!)</li>
+</ul></li>
+<li class="fragment">Solution: <span class="alert">partial invariance</span></li>
+</ul>
+</div>
+<div>
+
+</div>
+<div class="fragment quarto-layout-panel" data-layout="[1, 1.3]">
+<div class="quarto-layout-row quarto-layout-valign-center">
+<div class="quarto-layout-cell" style="flex-basis: 43.5%;justify-content: center;">
+<p><img data-src="images/perminv6d_mvr_regret.png"></p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 56.5%;justify-content: center;">
+<p><img data-src="images/benchmark.png"></p>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="application-fusion-reactor-design" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
+<h1>Application: fusion reactor design</h1>
+
+</section>
+<section id="application-fusion-reactor-design-1" class="slide level2">
+<h2>Application: fusion reactor design</h2>
+<h3 id="plasma-profiles">Plasma profiles</h3>
+<div class="columns">
+<div class="column" style="width:35%;">
+<p><img data-src="images/plasma_equilibrium.png" class="absolute" style="height: 75%; "></p>
+</div><div class="column" style="width:65%;">
+<ul>
+<li><p>Many plasma properties are treated as 1D functions of radius, or <span class="alert">profiles</span></p></li>
+<li><p>One important example is the <span class="alert">safety factor</span>, <span class="math inline">\(q\)</span></p></li>
+</ul>
+<p><img data-src="images/q2.png"></p>
+</div>
+</div>
+<p>::: :::</p>
+</section>
+<section id="application-fusion-reactor-design-2" class="slide level2">
+<h2>Application: fusion reactor design</h2>
+<h3 id="plasma-profiles-1">Plasma profiles</h3>
+<div class="columns">
+<div class="column" style="width:35%;">
+<p><img data-src="images/plasma_equilibrium.png" class="absolute" style="height: 75%; "></p>
+</div><div class="column" style="width:65%;">
+<ul>
+<li><p>Many plasma properties are treated as 1D functions of radius, or <span class="alert">profiles</span></p></li>
+<li><p>One important example is the <span class="alert">safety factor</span>, <span class="math inline">\(q\)</span></p></li>
+</ul>
+<p><img data-src="images/q4.png"></p>
+</div>
+</div>
+<p>:::</p>
+</section>
+<section id="application-fusion-reactor-design-3" class="slide level2">
+<h2>Application: fusion reactor design</h2>
+<h3 id="safety-factor-optimisation">Safety factor optimisation</h3>
+<div class="fragment">
+<ul>
+<li>Safety factor can be controlled by auxiliary current drive system, <span class="alert">ECRH</span>
+<ul>
+<li>Drives current in a fixed region</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Optimisation task: <span class="alert"><strong>find an ECRH targeting setup that maximises performance of safety factor profile</strong></span></li>
+</ul>
+</div>
+<div class="fragment">
+<p><img data-src="images/ecrh_profile.png" class="absolute" style="left: 25%; bottom: 1%; height: 45%; "></p>
+</div>
+</section>
+<section id="application-fusion-reactor-design-4" class="slide level2">
+<h2>Application: fusion reactor design</h2>
+<h3 id="safety-factor-optimisation-1">Safety factor optimisation</h3>
+<p>Optimisation task: <span class="alert"><strong>find an ECRH targeting setup that maximises performance of safety factor profile</strong></span></p>
+<div>
+<ul>
+<li class="fragment"><span class="math inline">\(N\)</span> ECRH launchers with same amplitudes and widths</li>
+<li class="fragment">Input <span class="math inline">\(x \in \mathbb{R}^N\)</span> sets the targeting location of the launchers</li>
+<li class="fragment">This task exhibits <span class="alert">permutation invariance</span>!
+<ul>
+<li class="fragment">Can swap locations of launchers in <span class="math inline">\(x\)</span></li>
+<li class="fragment">Output of <span class="math inline">\([x_1, x_2, x_3]\)</span> is the same as <span class="math inline">\([x_1, x_3, x_1]\)</span></li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="application-fusion-reactor-design-5" class="slide level2">
+<h2>Application: fusion reactor design</h2>
+<h3 id="safety-factor-optimisation-2">Safety factor optimisation</h3>
+<ul>
+<li>Using an invariant kernel allows us to find better solutions</li>
+</ul>
+<div class="fragment">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="images/safety_factor_progress.png" height="400"></p>
+<figcaption>Showing mean of 5 runs. Unconverged simulations cause error bars to uninformative.</figcaption>
+</figure>
+</div>
+</div>
+</section></section>
+<section>
+<section id="open-questions" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
+<h1>Open questions</h1>
+
+</section>
+<section id="open-questions-1" class="slide level2">
+<h2>Open questions</h2>
+<div>
+<ul>
+<li class="fragment">Can we get a tighter lower bound?
+<ul>
+<li class="fragment">Would require development of a new class of proof</li>
+</ul></li>
+<li class="fragment">Non-isotropic kernels require a double sum, <span class="math display">\[ k_G(x, x') = \sum_{\sigma \in G} \sum_{\tau \in G} k(\sigma(x), \tau(x')).\]</span>
+<ul>
+<li class="fragment">Computational cost <span class="math inline">\(|G|^2\)</span></li>
+<li class="fragment">Are there other approximations we could make?</li>
+<li class="fragment">Example: random subgroup selection</li>
+</ul></li>
+<li class="fragment">Can we get regret bounds for subgroup-invariant kernels?</li>
+</ul>
+</div>
+</section></section>
+<section id="section" class="title-slide slide level1 center" data-background-color="#dfeaec" data-background-image="images/gp.png" data-background-opacity="0.2">
+<h1></h1>
 <div class="quarto-auto-generated-content">
 <div class="footer footer-default">
 
 </div>
 </div>
-</section></section>
+</section>
     </div>
   </div>
 
