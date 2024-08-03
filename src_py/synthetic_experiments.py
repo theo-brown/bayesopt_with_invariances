@@ -1,6 +1,8 @@
 import argparse
 import warnings
+from copy import deepcopy
 from dataclasses import dataclass, field
+from functools import partial
 
 import gpytorch
 import h5py
@@ -54,7 +56,9 @@ def get_kernel(label, device, dtype, **kwargs):
             base_kernel=base_kernel,
             transformations=permutation_group,
         )
-        noninvariant_base_kernel = gpytorch.kernels.ScaleKernel(base_kernel)
+        
+        noninvariant_base_kernel = deepcopy(base_kernel)
+        noninvariant_base_kernel = gpytorch.kernels.ScaleKernel(noninvariant_base_kernel)
         noninvariant_base_kernel.outputscale = torch.tensor([kwargs.get("noninvariant_scale", 0.1)], device=device, dtype=dtype)
         noninvariant_base_kernel.raw_outputscale.requires_grad = False
         return invariant_base_kernel + noninvariant_base_kernel
@@ -91,7 +95,7 @@ class RunConfig:
     objective_kernel_kwargs: dict = field(default_factory=lambda: {})  # Additional arguments for the objective kernel
     eval_kernel_kwargs: dict  = field(default_factory=lambda: {})  # Additional arguments for the evaluation kernel
 
-def run(run_config: RunConfig):
+def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
     print(f"Running {run_config.output_group} on {run_config.device}")
     torch.manual_seed(run_config.seed)
     
@@ -178,12 +182,17 @@ def run(run_config: RunConfig):
         print(f"{run_config.output_group} [{i+1}/{run_config.n_steps}]: {next_reported_f.item()}")
                 
     # Save to file 
-    with h5py.File(run_config.output_file, 'a') as h5:
-        h5[f"{run_config.output_group}/observed_x"] = train_x.detach().cpu().numpy()
-        h5[f"{run_config.output_group}/observed_y"] = train_y.detach().cpu().numpy()
-        h5[f"{run_config.output_group}/reported_x"] = reported_x.detach().cpu().numpy()
-        h5[f"{run_config.output_group}/reported_f"] = reported_f.detach().cpu().numpy()
-
+    lock.acquire()
+    try:
+        print(f"Saving output from {run_config.output_group}...")
+        with h5py.File(run_config.output_file, 'a') as h5:
+            h5[f"{run_config.output_group}/observed_x"] = train_x.detach().cpu().numpy()
+            h5[f"{run_config.output_group}/observed_y"] = train_y.detach().cpu().numpy()
+            h5[f"{run_config.output_group}/reported_x"] = reported_x.detach().cpu().numpy()
+            h5[f"{run_config.output_group}/reported_f"] = reported_f.detach().cpu().numpy()
+    finally:
+        lock.release()
+        
 
 if __name__ == "__main__":   
     parser = argparse.ArgumentParser()
@@ -273,29 +282,49 @@ if __name__ == "__main__":
         devices += [None]*(len(eval_kernels) - len(devices))
         InsufficientDevicesWarning = f"Number of devices does not match number of kernels. Using CPU for kernels {eval_kernels[len(args.devices):]}."
         warnings.warn(InsufficientDevicesWarning)
-        
+    
+    # Initialise the file
+    with h5py.File(output_file, 'w') as h5:
+        h5.attrs["objective"] = args.objective
+        h5.attrs["acqf"] = args.acqf
+        h5.attrs["devices"] = args.devices
+        h5.attrs["repeats"] = repeats
+        h5.attrs["objective_kernel"] = objective_kernel
+        h5.attrs["objective_n_init"] = objective_n_init
+        h5.attrs["objective_seed"] = objective_seed
+        h5.attrs["noise_var"] = noise_var
+        h5.attrs["d"] = d
+        h5.attrs["eval_kernels"] = eval_kernels
+        h5.attrs["acqf"] = acqf
+        h5.attrs["n_steps"] = n_steps
+        for eval_kernel in eval_kernels:
+            h5.create_group(eval_kernel)
+    
+    # Create experiment configs
+    run_configs = [
+        RunConfig(
+            objective_kernel=objective_kernel,
+            objective_n_init=objective_n_init,
+            objective_seed=objective_seed,
+            noise_var=noise_var,
+            d=d,
+            seed=repeat,
+            eval_kernel=eval_kernel,
+            acqf=acqf,
+            n_steps=n_steps_i,
+            output_file=output_file,
+            output_group=f"{eval_kernel}/{repeat}",
+            device=device, 
+            objective_kernel_kwargs=objective_kernel_kwargs,
+            eval_kernel_kwargs=eval_kernel_kwargs,           
+        )
+        for eval_kernel, n_steps_i, device in zip(eval_kernels, n_steps, devices)
+        for repeat in range(repeats)
+    ]
+    
     # Run experiments
-    for repeat in range(repeats):
-        run_configs = [
-            RunConfig(
-                objective_kernel=objective_kernel,
-                objective_n_init=objective_n_init,
-                objective_seed=objective_seed,
-                noise_var=noise_var,
-                d=d,
-                seed=repeat,
-                eval_kernel=eval_kernel,
-                acqf=acqf,
-                n_steps=n_steps_i,
-                output_file=output_file,
-                output_group=f"{eval_kernel}/{repeat}",
-                device=device, 
-                objective_kernel_kwargs=objective_kernel_kwargs,
-                eval_kernel_kwargs=eval_kernel_kwargs,           
-            )
-            for eval_kernel, n_steps_i, device in zip(eval_kernels, n_steps, devices)
-        ]
-        
-        # Run each kernel on a separate process
-        with torch.multiprocessing.Pool(processes=len(run_configs)) as pool:
-            pool.map(run, run_configs)
+    manager = torch.multiprocessing.Manager()
+    lock = manager.Lock()
+    eval_fn = partial(run, lock)
+    with torch.multiprocessing.Pool(processes=len(run_configs)) as pool:
+        pool.map(eval_fn, run_configs)
