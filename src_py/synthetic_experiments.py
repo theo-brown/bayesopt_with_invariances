@@ -198,7 +198,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("objective", type=str, choices=["PermInv-2D", "CyclInv-3D", "PermInv-6D", "QuasiPermInv-3D-0.1", "QuasiPermInv-3D-0.2"])
     parser.add_argument("acqf", type=str, choices=["ucb", "mvr"])
-    parser.add_argument("--devices", type=str, nargs="*", default=[])
+    parser.add_argument("--devices", type=str, nargs="*", default=[None])
+    parser.add_argument("--n_processes", type=int, default=1)
     args = parser.parse_args()
 
     # Experiment setup
@@ -277,11 +278,10 @@ if __name__ == "__main__":
         if device is not None and device != "cpu"
         else None 
         for device in args.devices
-    ]   
-    if len(devices) != len(eval_kernels):
-        devices += [None]*(len(eval_kernels) - len(devices))
-        InsufficientDevicesWarning = f"Number of devices does not match number of kernels. Using CPU for kernels {eval_kernels[len(args.devices):]}."
-        warnings.warn(InsufficientDevicesWarning)
+    ]
+    # Distribute tasks across devices
+    # This is a round-robin method
+    devices = [devices[i % len(devices)] for i in range(repeats)]
     
     # Initialise the file
     with h5py.File(output_file, 'w') as h5:
@@ -326,5 +326,5 @@ if __name__ == "__main__":
     manager = torch.multiprocessing.Manager()
     lock = manager.Lock()
     eval_fn = partial(run, lock)
-    with torch.multiprocessing.Pool(processes=len(run_configs)) as pool:
-        pool.map(eval_fn, run_configs)
+    with torch.multiprocessing.Pool(processes=args.n_processes) as pool:
+        pool.map(eval_fn, run_configs, chunksize=len(run_configs) // args.n_processes)
