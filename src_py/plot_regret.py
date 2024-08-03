@@ -1,8 +1,9 @@
-import matplotlib.pyplot as plt 
-import numpy as np
-import h5py 
-import tol_colors 
 import argparse
+
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import tol_colors
 
 # Set font sizes
 params = {'legend.fontsize': 10,
@@ -20,7 +21,7 @@ palette = list(tol_colors.tol_cset('bright'))
 if __name__=="__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("objective", type=str, choices=["perminv2d", "cyclinv3d", "perminv6d"])
+    parser.add_argument("objective", type=str, choices=["perminv2d", "cyclinv3d", "perminv6d", "quasiperminv3d_0.2"])
     parser.add_argument("acqf", type=str, choices=["ucb", "mvr"])
     args = parser.parse_args()
     
@@ -65,6 +66,30 @@ if __name__=="__main__":
         elif args.acqf == "mvr":
             ylim = [-0.05, 1.5]
             n_legend_cols = 2
+    elif args.objective == "quasiperminv3d_0.01":
+        objective = "QuasiPermInv-3D-0.01"
+        kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        kernel_labels = ["Standard", "Permutation invariant", "Additive"]
+        colors = [palette[0], palette[2], palette[1]]
+        f_opt = 2.395
+        n_repeats = 32
+        xlim = [0, 256]
+        if args.acqf == "ucb":
+            ylim = [0, None]
+        elif args.acqf == "mvr":
+            ylim = [0, None]
+    elif args.objective == "quasiperminv3d_0.05":
+        objective = "QuasiPermInv-3D-0.05"
+        kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        kernel_labels = ["Standard", "Permutation invariant", "Additive"]
+        colors = [palette[0], palette[2], palette[1]]
+        f_opt = 2.395
+        n_repeats = 32
+        xlim = [0, 256]
+        if args.acqf == "ucb":
+            ylim = [0, None]
+        elif args.acqf == "mvr":
+            ylim = [0, None]
         
     if args.acqf == "ucb":
         regret_label = "Cumulative regret"
@@ -77,7 +102,7 @@ if __name__=="__main__":
     figure = plt.figure(figsize=(4, 3))
     for kernel, label, color in zip(kernels, kernel_labels, colors):
         reported_f = []
-        with h5py.File(f"{args.objective}_{args.acqf}.h5", "r") as h5:
+        with h5py.File(f"experiments/synthetic/data/{args.objective}_{args.acqf}.h5", "r") as h5:
             for i in range(n_repeats):
                 print(f"Loading {kernel}/{i}")
                 reported_f.append(h5[f"{kernel}/{i}/reported_f"][:])
@@ -101,4 +126,4 @@ if __name__=="__main__":
     plt.title(objective, fontsize=titlefontsize)
     plt.rcParams.update(params)
 
-    plt.savefig(f"{args.objective}_{args.acqf}_regret.pdf", bbox_inches="tight")
+    plt.savefig(f"experiments/synthetic/figures/{args.objective}_{args.acqf}_regret.pdf", bbox_inches="tight")
