@@ -288,7 +288,8 @@ if __name__ == "__main__":
         objective_kernel = "quasi_permutation_invariant"
         objective_n_init = 64
         objective_seed = 19
-        noise_var = None
+        noise_var = 0.01
+        learn_noise = True
         d = 2
         repeats = 16
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
