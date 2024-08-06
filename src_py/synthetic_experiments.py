@@ -285,7 +285,7 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 16
+        repeats = 32
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
         n_steps = [128, 128, 128]
@@ -301,7 +301,7 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 16
+        repeats = 32
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
         n_steps = [128, 128, 128]
@@ -317,7 +317,7 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 16
+        repeats = 32
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
         n_steps = [128, 128, 128]
