@@ -16,7 +16,7 @@ args = parser.parse_args()
 device = torch.device(args.device)
 
 # Options
-n_points_to_fit = 100
+n_points_to_fit = 200
 n_seeds = 10
 n_runs_per_seed = 10
 d = 6
@@ -50,6 +50,7 @@ def benchmark_memory(seed, label, kernel):
     if "augmented" in label:
         x_augmented = block_permutation_group(x, int(label[0])).reshape(-1, d)
         x = torch.cat([x, x_augmented], dim=0)
+        del x_augmented
     y = (f(x) + 0.01*torch.randn(x.shape[0], device=device)).to(dtype=torch.float64).unsqueeze(-1)
                 
     # Define the model
@@ -61,23 +62,26 @@ def benchmark_memory(seed, label, kernel):
     # Fit the model
     fit_gpytorch_mll(mll)
     # Get the peak memory usage
-    memory = torch.cuda.max_memory_allocated(device=device)
+    allocated_memory = torch.cuda.max_memory_allocated(device=device)
+    reserved_memory = torch.cuda.max_memory_reserved(device=device)
     
     # Clean up
     del x, y, model, mll
     torch.cuda.empty_cache()
     
-    return memory
+    return allocated_memory, reserved_memory
 
 
 # Run benchmarks
 for label, kernel in kernels.items():
     print("Benchmarking kernel", label)
-    max_memory = torch.empty(n_seeds, dtype=torch.float64)
+    allocated_memory = torch.empty(n_seeds, dtype=torch.float64)
+    reserved_memory = torch.empty(n_seeds, dtype=torch.float64)
     for i, seed in enumerate(range(n_seeds)):
-        max_memory[i] = benchmark_memory(seed, label, kernel)
+        allocated_memory[i], reserved_memory[i] = benchmark_memory(seed, label, kernel)
     
     with h5py.File("experiments/synthetic/data/memory_benchmark_results.h5", "a") as h5:
-        h5[label] = max_memory.detach().cpu().numpy()
+        h5[label]["allocated"] = allocated_memory.detach().cpu().numpy()
+        h5[label]["reserved"] = reserved_memory.detach().cpu().numpy()
 
     print("Done.")
