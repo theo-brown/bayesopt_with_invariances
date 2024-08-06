@@ -174,14 +174,13 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         if reporting_rule == "latest":
             next_reported_x = next_x 
         elif reporting_rule == "max_posterior_mean":
-            reported_x, _ = optimize_acqf(
+            next_reported_x, _ = optimize_acqf(
                 PosteriorMean(model),
                 bounds,
                 q=1,
                 num_restarts=8,
                 raw_samples=1024,
             )
-            next_reported_x = reported_x
         else:
             raise ValueError(f"Unknown reporting rule {reporting_rule}")
         # Observe true function value
@@ -190,7 +189,7 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         # Update history
         train_x = torch.cat([train_x, next_x])
         train_y = torch.cat([train_y, next_y])
-        reported_x[i, :] = next_reported_x.squeeze()
+        reported_x[i] = next_reported_x.squeeze()
         reported_f[i] = next_reported_f
         
         print(f"{run_config.output_group} [{i+1}/{run_config.n_steps}]: {next_reported_f.item()}")
