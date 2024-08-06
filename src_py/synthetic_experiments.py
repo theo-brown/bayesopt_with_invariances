@@ -293,7 +293,7 @@ if __name__ == "__main__":
         objective_kernel_kwargs = {"noninvariant_scale": 0.01}
         eval_kernel_kwargs = {"noninvariant_scale": 0.01}
         if acqf == "ucb":
-            acqf_kwargs = {"beta": 3.0}
+            acqf_kwargs = {"beta": 5.0}
     elif args.objective == "QuasiPermInv-2D-0.05":
         objective_kernel = "quasi_permutation_invariant"
         objective_n_init = 64
@@ -309,7 +309,7 @@ if __name__ == "__main__":
         objective_kernel_kwargs = {"noninvariant_scale": 0.05}
         eval_kernel_kwargs = {"noninvariant_scale": 0.05}
         if acqf == "ucb":
-            acqf_kwargs = {"beta": 3.0}
+            acqf_kwargs = {"beta": 5.0}
     elif args.objective == "QuasiPermInv-2D-0.1":
         objective_kernel = "quasi_permutation_invariant"
         objective_n_init = 64
@@ -325,7 +325,7 @@ if __name__ == "__main__":
         objective_kernel_kwargs = {"noninvariant_scale": 0.1}
         eval_kernel_kwargs = {"noninvariant_scale": 0.1}
         if acqf == "ucb":
-            acqf_kwargs = {"beta": 3.0}
+            acqf_kwargs = {"beta": 5.0}
         
     # Torch setup
     warnings.filterwarnings("ignore", category=InputDataWarning)
