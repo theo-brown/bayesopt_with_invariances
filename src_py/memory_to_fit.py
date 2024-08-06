@@ -18,7 +18,6 @@ device = torch.device(args.device)
 # Options
 n_points_to_fit = 64
 n_seeds = 100
-n_seeds = 100
 n_runs_per_seed = 100
 d = 6
 
@@ -43,9 +42,6 @@ kernels = {
 
 # Define benchmark 
 def benchmark_memory(seed, label, kernel):
-    # Reset allocated memory
-    torch.cuda.reset_max_memory_allocated() 
-    
     # Seed RNG
     torch.manual_seed(seed)
     # Generate training data
@@ -59,10 +55,13 @@ def benchmark_memory(seed, label, kernel):
     # Define the model
     model = SingleTaskGP(x, y, covar_module=kernel)
     mll = ExactMarginalLogLikelihood(model.likelihood, model)
-    fit_gpytorch_mll(mll)
     
-    # Return the peak memory usage
-    return torch.cuda.max_memory_allocated()
+    # Reset memory counter
+    torch.cuda.reset_peak_memory_stats(device=device)
+    # Fit the model
+    fit_gpytorch_mll(mll)
+    # Get the peak memory usage
+    return torch.cuda.max_memory_allocated(device=device)
 
 
 # Run benchmarks
