@@ -67,7 +67,7 @@ for label, kernel in kernels.items():
             model = SingleTaskGP(x, y, covar_module=kernel)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             """,
-            globals={'seed': seed, 'f': f, 'n_points_to_fit': n_points_to_fit, 'kernel': kernel, 'device': device},
+            globals={'seed': seed, 'f': f, 'n_points_to_fit': n_points_to_fit, 'kernel': kernel, 'device': device, 'label': label},
         ).timeit(n_runs_per_seed)
         
         times[i] = result.times[0]
