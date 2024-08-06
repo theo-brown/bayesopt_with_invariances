@@ -59,8 +59,11 @@ def get_kernel(label, device, dtype, **kwargs):
         
         noninvariant_base_kernel = deepcopy(base_kernel)
         noninvariant_base_kernel = gpytorch.kernels.ScaleKernel(noninvariant_base_kernel)
-        noninvariant_base_kernel.outputscale = torch.tensor([kwargs.get("noninvariant_scale", 0.1)], device=device, dtype=dtype)
-        noninvariant_base_kernel.raw_outputscale.requires_grad = False
+        if kwargs.get("noninvariant_scale", None) is not None:
+            noninvariant_base_kernel.outputscale = torch.tensor([kwargs["noninvariant_scale"]], device=device, dtype=dtype)
+            noninvariant_base_kernel.raw_outputscale.requires_grad = False
+        else:
+            noninvariant_base_kernel.outputscale = torch.tensor([0.01], device=device, dtype=dtype)
         return invariant_base_kernel + noninvariant_base_kernel
         
     elif label == "standard":
@@ -94,6 +97,8 @@ class RunConfig:
     # Optional settings
     objective_kernel_kwargs: dict = field(default_factory=lambda: {})  # Additional arguments for the objective kernel
     eval_kernel_kwargs: dict  = field(default_factory=lambda: {})  # Additional arguments for the evaluation kernel
+    learn_noise: bool = False  # Whether to learn the noise variance
+    
 
 def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
     print(f"Running {run_config.output_group} on {run_config.device}")
@@ -133,18 +138,27 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
     train_y = f_noisy(train_x)
     
     # Create arrays to store reported values in
-    reported_x = torch.tensor([], device=run_config.device, dtype=run_config.dtype)
-    reported_f = torch.tensor([], device=run_config.device, dtype=run_config.dtype)
+    reported_x = torch.empty((run_config.n_steps, run_config.d), device=run_config.device, dtype=run_config.dtype)
+    reported_f = torch.empty((run_config.n_steps, 1), device=run_config.device, dtype=run_config.dtype)
            
     for i in range(run_config.n_steps):
         # Update GP with training data
-        model = SingleTaskGP(
-            train_x,
-            train_y.unsqueeze(-1),
-            run_config.noise_var*torch.ones_like(train_y.unsqueeze(-1), device=run_config.device, dtype=run_config.dtype), 
-            covar_module=kernel,
-        )
-        
+        if run_config.learn_noise:
+            model = SingleTaskGP(
+                train_x,
+                train_y.unsqueeze(-1),
+                covar_module=kernel,
+            )
+            mll = gpytorch.mlls.ExactMarginalLogLikelihood(model.likelihood, model)
+            fit_gpytorch_mll(mll)
+        else:
+            model = SingleTaskGP(
+                train_x,
+                train_y.unsqueeze(-1),
+                run_config.noise_var*torch.ones_like(train_y.unsqueeze(-1), device=run_config.device, dtype=run_config.dtype), 
+                covar_module=kernel,
+            )
+            
         # Maximise acqf
         next_x, _ = optimize_acqf(
             acqf(model, **acqf_kwargs),
@@ -176,8 +190,8 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         # Update history
         train_x = torch.cat([train_x, next_x])
         train_y = torch.cat([train_y, next_y])
-        reported_x = torch.cat([reported_x, next_reported_x])
-        reported_f = torch.cat([reported_f, next_reported_f])
+        reported_x[i] = next_reported_x
+        reported_f[i] = next_reported_f
         
         print(f"{run_config.output_group} [{i+1}/{run_config.n_steps}]: {next_reported_f.item()}")
                 
@@ -248,12 +262,13 @@ if __name__ == "__main__":
         objective_n_init = 256
         objective_seed = 6
         noise_var = 0.01
+        learn_noise = True
         d = 3
         repeats = 32
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
         n_steps = [256, 256, 256]
-        output_file = f"experiments/synthetic/data/quasiperminv3d_0.1_{acqf}.h5"
+        output_file = f"experiments/synthetic/data/quasiperminv3d_0.01_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.01}
         eval_kernel_kwargs = {"noninvariant_scale": 0.01}
     elif args.objective == "QuasiPermInv-3D-0.05":
@@ -261,12 +276,13 @@ if __name__ == "__main__":
         objective_n_init = 256
         objective_seed = 6
         noise_var = 0.01
+        learn_noise = True
         d = 3
         repeats = 32
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
         n_steps = [256, 256, 256]
-        output_file = f"experiments/synthetic/data/quasiperminv3d_0.2_{acqf}.h5"
+        output_file = f"experiments/synthetic/data/quasiperminv3d_0.05_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.05}
         eval_kernel_kwargs = {"noninvariant_scale": 0.05}
         
@@ -297,6 +313,7 @@ if __name__ == "__main__":
         h5.attrs["eval_kernels"] = eval_kernels
         h5.attrs["acqf"] = acqf
         h5.attrs["n_steps"] = n_steps
+        h5.attrs["learn_noise"] = learn_noise
         for eval_kernel in eval_kernels:
             h5.create_group(eval_kernel)
     
