@@ -18,8 +18,8 @@ device = torch.device(args.device)
 
 # Options
 n_points_to_fit = 64
-n_seeds = 64
-n_runs_per_seed = 64
+n_seeds = 100
+n_runs_per_seed = 100
 d = 6
 
 # Create synthetic objective
