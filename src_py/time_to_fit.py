@@ -34,7 +34,8 @@ f = create_synthetic_objective(
 # Define kernels
 kernels = {
     "standard": ScaleKernel(MaternKernel(nu=2.5)),
-    "augmented": ScaleKernel(MaternKernel(nu=2.5)),
+    "3_block_permutation_augmented": ScaleKernel(MaternKernel(nu=2.5)),
+    "2_block_permutation_augmented": ScaleKernel(MaternKernel(nu=2.5)),
     "3_block_permutation_invariant": ScaleKernel(InvariantKernel(MaternKernel(nu=2.5), lambda x: block_permutation_group(x, 3))),
     "2_block_permutation_invariant": ScaleKernel(InvariantKernel(MaternKernel(nu=2.5), lambda x: block_permutation_group(x, 2))),
     "permutation_invariant": ScaleKernel(InvariantKernel(MaternKernel(nu=2.5), permutation_group)),
@@ -52,7 +53,7 @@ for label, kernel in kernels.items():
             from botorch.models import SingleTaskGP
             from gpytorch.mlls import ExactMarginalLogLikelihood
             from botorch.fit import fit_gpytorch_mll
-            from transformation_groups import permutation_group
+            from transformation_groups import block_permutation_group
             
             # Seed RNG
             torch.manual_seed(seed)
@@ -60,7 +61,7 @@ for label, kernel in kernels.items():
             x = torch.rand(n_points_to_fit, d, device=device, dtype=torch.float64)
             # Augment, if required
             if "augmented" in label:
-                x_augmented = permutation_group(x).reshape(-1, d)
+                x_augmented = block_permutation_group(x, int(label[0])).reshape(-1, d)
                 x = torch.cat([x, x_augmented], dim=0)
             y = (f(x) + 0.01*torch.randn(x.shape[0], device=device)).to(dtype=torch.float64).unsqueeze(-1)
                         
