@@ -81,7 +81,7 @@ for label, kernel in kernels.items():
         allocated_memory[i], reserved_memory[i] = benchmark_memory(seed, label, kernel)
     
     with h5py.File("experiments/synthetic/data/memory_benchmark_results.h5", "a") as h5:
-        h5[label]["allocated"] = allocated_memory.detach().cpu().numpy()
-        h5[label]["reserved"] = reserved_memory.detach().cpu().numpy()
+        h5[f"{label}/allocated"] = allocated_memory.detach().cpu().numpy()
+        h5[f"{label}/reserved"] = reserved_memory.detach().cpu().numpy()
 
     print("Done.")
