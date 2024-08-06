@@ -190,7 +190,7 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         # Update history
         train_x = torch.cat([train_x, next_x])
         train_y = torch.cat([train_y, next_y])
-        reported_x[i, :] = next_reported_x
+        reported_x[i, :] = next_reported_x.squeeze()
         reported_f[i] = next_reported_f
         
         print(f"{run_config.output_group} [{i+1}/{run_config.n_steps}]: {next_reported_f.item()}")
