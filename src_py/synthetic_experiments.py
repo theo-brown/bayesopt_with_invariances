@@ -52,10 +52,13 @@ def get_kernel(label, device, dtype, **kwargs):
             transformations=lambda x: block_permutation_group(x, 3),
         )
     elif label == "quasi_permutation_invariant":
-        invariant_base_kernel = InvariantKernel(
-            base_kernel=base_kernel,
-            transformations=permutation_group,
+        invariant_base_kernel = gpytorch.kernels.ScaleKernel(
+            InvariantKernel(
+                base_kernel=base_kernel,
+                transformations=permutation_group,
+            )
         )
+        invariant_base_kernel.raw_outputscale.requires_grad = False
         
         noninvariant_base_kernel = deepcopy(base_kernel)
         noninvariant_base_kernel = gpytorch.kernels.ScaleKernel(noninvariant_base_kernel)
@@ -64,6 +67,7 @@ def get_kernel(label, device, dtype, **kwargs):
             noninvariant_base_kernel.raw_outputscale.requires_grad = False
         else:
             noninvariant_base_kernel.outputscale = torch.tensor([0.01], device=device, dtype=dtype)
+        invariant_base_kernel.outputscale = 1 - noninvariant_base_kernel.outputscale            
         return invariant_base_kernel + noninvariant_base_kernel
         
     elif label == "standard":
