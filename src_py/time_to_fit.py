@@ -72,7 +72,7 @@ for label, kernel in kernels.items():
         
         times[i] = result.times[0]
     
-    with h5py.File("benchmark_results.h5", "a") as h5:
+    with h5py.File("experiments/synthetic/data/benchmark_results.h5", "a") as h5:
         h5[label] = times.detach().cpu().numpy()
 
     print("Done.")
