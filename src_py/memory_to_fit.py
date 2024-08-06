@@ -16,9 +16,9 @@ args = parser.parse_args()
 device = torch.device(args.device)
 
 # Options
-n_points_to_fit = 64
-n_seeds = 100
-n_runs_per_seed = 100
+n_points_to_fit = 100
+n_seeds = 10
+n_runs_per_seed = 10
 d = 6
 
 # Create synthetic objective
@@ -61,7 +61,13 @@ def benchmark_memory(seed, label, kernel):
     # Fit the model
     fit_gpytorch_mll(mll)
     # Get the peak memory usage
-    return torch.cuda.max_memory_allocated(device=device)
+    memory = torch.cuda.max_memory_allocated(device=device)
+    
+    # Clean up
+    del x, y, model, mll
+    torch.cuda.empty_cache()
+    
+    return memory
 
 
 # Run benchmarks
