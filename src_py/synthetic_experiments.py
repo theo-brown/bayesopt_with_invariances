@@ -101,6 +101,7 @@ class RunConfig:
     # Optional settings
     objective_kernel_kwargs: dict = field(default_factory=lambda: {})  # Additional arguments for the objective kernel
     eval_kernel_kwargs: dict  = field(default_factory=lambda: {})  # Additional arguments for the evaluation kernel
+    acqf_kwargs: dict = field(default_factory=lambda: {})  # Additional arguments for the acquisition function
     learn_noise: bool = False  # Whether to learn the noise variance
     
 
@@ -128,11 +129,9 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
     
     if run_config.acqf == "ucb":
         acqf = UpperConfidenceBound
-        acqf_kwargs = {"beta": 2.0}
         reporting_rule = "latest"
     elif run_config.acqf == "mvr":
         acqf = PosteriorStandardDeviation
-        acqf_kwargs = {}
         reporting_rule = "max_posterior_mean"
     else:
         raise ValueError(f"Unknown acqf {run_config.acqf}")
@@ -180,7 +179,7 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
             
         # Maximise acqf
         next_x, _ = optimize_acqf(
-            acqf(model, **acqf_kwargs),
+            acqf(model, **run_config.acqf_kwargs),
             bounds,
             q=1,
             num_restarts=8,
@@ -252,6 +251,10 @@ if __name__ == "__main__":
         output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
+        if acqf == "ucb":
+            acqf_kwargs = {"beta": 2.0}
+        else:
+            acqf_kwargs = {}
     elif args.objective == "CyclInv-3D":
         objective_kernel = "cyclic_invariant"
         objective_n_init = 256
@@ -265,6 +268,10 @@ if __name__ == "__main__":
         output_file = f"experiments/synthetic/data/cyclinv3d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
+        if acqf == "ucb":
+            acqf_kwargs = {"beta": 2.0}
+        else:
+            acqf_kwargs = {}
     elif args.objective == "PermInv-6D":
         objective_kernel = "permutation_invariant"
         objective_n_init = 512
@@ -278,6 +285,10 @@ if __name__ == "__main__":
         output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
+        if acqf == "ucb":
+            acqf_kwargs = {"beta": 2.0}
+        else:
+            acqf_kwargs = {}
     elif args.objective == "QuasiPermInv-2D-0.01":
         objective_kernel = "quasi_permutation_invariant"
         objective_n_init = 64
@@ -293,7 +304,9 @@ if __name__ == "__main__":
         objective_kernel_kwargs = {"noninvariant_scale": 0.01}
         eval_kernel_kwargs = {"noninvariant_scale": 0.01}
         if acqf == "ucb":
-            acqf_kwargs = {"beta": 10.0}
+            acqf_kwargs = {"beta": 2.0}
+        else:
+            acqf_kwargs = {}
     elif args.objective == "QuasiPermInv-2D-0.05":
         objective_kernel = "quasi_permutation_invariant"
         objective_n_init = 64
@@ -309,7 +322,9 @@ if __name__ == "__main__":
         objective_kernel_kwargs = {"noninvariant_scale": 0.05}
         eval_kernel_kwargs = {"noninvariant_scale": 0.05}
         if acqf == "ucb":
-            acqf_kwargs = {"beta": 10.0}
+            acqf_kwargs = {"beta": 3.0}
+        else:
+            acqf_kwargs = {}
     elif args.objective == "QuasiPermInv-2D-0.1":
         objective_kernel = "quasi_permutation_invariant"
         objective_n_init = 64
@@ -325,7 +340,9 @@ if __name__ == "__main__":
         objective_kernel_kwargs = {"noninvariant_scale": 0.1}
         eval_kernel_kwargs = {"noninvariant_scale": 0.1}
         if acqf == "ucb":
-            acqf_kwargs = {"beta": 10.0}
+            acqf_kwargs = {"beta": 3.0}
+        else:
+            acqf_kwargs = {}
         
     # Torch setup
     warnings.filterwarnings("ignore", category=InputDataWarning)
@@ -355,8 +372,8 @@ if __name__ == "__main__":
         h5.attrs["acqf"] = acqf
         h5.attrs["n_steps"] = n_steps
         h5.attrs["learn_noise"] = learn_noise
-        if acqf == "ucb":
-            h5.attrs["ucb_beta"] = acqf_kwargs["beta"]
+        for k, v in acqf_kwargs.items():
+            h5.attrs[f"acqf_{k}"] = v
         for eval_kernel in eval_kernels:
             h5.create_group(eval_kernel)
     
@@ -376,7 +393,8 @@ if __name__ == "__main__":
             output_group=f"{eval_kernel}/{repeat}",
             device=device, 
             objective_kernel_kwargs=objective_kernel_kwargs,
-            eval_kernel_kwargs=eval_kernel_kwargs,           
+            eval_kernel_kwargs=eval_kernel_kwargs,     
+            acqf_kwargs=acqf_kwargs,      
         )
         for eval_kernel, n_steps_i, device in zip(eval_kernels, n_steps, devices)
         for repeat in range(repeats)
