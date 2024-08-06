@@ -139,7 +139,7 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
     
     # Create arrays to store reported values in
     reported_x = torch.empty((run_config.n_steps, run_config.d), device=run_config.device, dtype=run_config.dtype)
-    reported_f = torch.empty((run_config.n_steps, 1), device=run_config.device, dtype=run_config.dtype)
+    reported_f = torch.empty((run_config.n_steps,), device=run_config.device, dtype=run_config.dtype)
            
     for i in range(run_config.n_steps):
         # Update GP with training data
