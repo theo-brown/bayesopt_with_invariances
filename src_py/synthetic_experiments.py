@@ -70,7 +70,7 @@ def get_kernel(label, device, dtype, **kwargs):
             noninvariant_base_kernel.outputscale = torch.tensor([0.01], device=device, dtype=dtype)
         invariant_base_kernel.outputscale = 1 - noninvariant_base_kernel.outputscale            
         return invariant_base_kernel + noninvariant_base_kernel
-    elif label in ["augmented", "standard"]:
+    elif label in ["augmented", "standard", "constrained"]:
         return base_kernel
     else:
         raise ValueError(f"Unknown kernel {label}")
@@ -178,13 +178,29 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
             )
             
         # Maximise acqf
-        next_x, _ = optimize_acqf(
-            acqf(model, **run_config.acqf_kwargs),
-            bounds,
-            q=1,
-            num_restarts=8,
-            raw_samples=1024,    
-        )
+        if run_config.eval_kernel == "constrained":
+            if run_config.objective_kernel != "permutation_invariant" and run_config.objective_kernel != "quasi_permutation_invariant":
+                raise ValueError("Constrained optimisation only supported for (quasi-) permutation invariant kernels.")
+            
+            def constraint_fn(x):
+               return torch.all(x[:-1] <= x[1:])
+           
+            next_x, _ = optimize_acqf(
+                acqf(model, **run_config.acqf_kwargs),
+                bounds,
+                q=1,
+                num_restarts=8,
+                raw_samples=1024,
+                inequality_constraints=[(constraint_fn, True)],
+            )
+        else:
+            next_x, _ = optimize_acqf(
+                acqf(model, **run_config.acqf_kwargs),
+                bounds,
+                q=1,
+                num_restarts=8,
+                raw_samples=1024,    
+            )
         # Make observation
         next_y = f_noisy(next_x)
 
@@ -245,9 +261,9 @@ if __name__ == "__main__":
         noise_var = 0.01
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant", "augmented"]
+        eval_kernels = ["standard", "permutation_invariant", "constrained", "augmented"]
         acqf = args.acqf
-        n_steps = [128, 128, 128]
+        n_steps = [128, 128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
@@ -264,7 +280,7 @@ if __name__ == "__main__":
         repeats = 32
         eval_kernels = ["standard", "cyclic_invariant", "augmented"]
         acqf = args.acqf
-        n_steps = [256, 256]
+        n_steps = [256, 256, 256]
         output_file = f"experiments/synthetic/data/cyclinv3d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
@@ -281,7 +297,7 @@ if __name__ == "__main__":
         repeats = 32
         eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant", "augmented"]
         acqf = args.acqf
-        n_steps = [640, 640, 640, 200, 200, 640]
+        n_steps = [640, 640, 640, 200, 640]
         output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
@@ -297,9 +313,9 @@ if __name__ == "__main__":
         learn_noise = False
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained", "augmented"]
         acqf = args.acqf
-        n_steps = [128, 128, 128]
+        n_steps = [128, 128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/quasiperminv2d_0.01_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.01}
         eval_kernel_kwargs = {"noninvariant_scale": 0.01}
@@ -315,9 +331,9 @@ if __name__ == "__main__":
         learn_noise = False
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained", "augmented"]
         acqf = args.acqf
-        n_steps = [128, 128, 128]
+        n_steps = [128, 128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/quasiperminv2d_0.05_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.05}
         eval_kernel_kwargs = {"noninvariant_scale": 0.05}
@@ -333,9 +349,9 @@ if __name__ == "__main__":
         learn_noise = False
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained", "augmented"]
         acqf = args.acqf
-        n_steps = [128, 128, 128]
+        n_steps = [128, 128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/quasiperminv2d_0.1_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.1}
         eval_kernel_kwargs = {"noninvariant_scale": 0.1}
