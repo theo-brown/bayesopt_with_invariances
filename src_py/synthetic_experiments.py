@@ -14,6 +14,7 @@ from botorch.acquisition import (
     UpperConfidenceBound,
 )
 from botorch.exceptions import InputDataWarning
+from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf
 from invariant_kernel import InvariantKernel
@@ -69,8 +70,7 @@ def get_kernel(label, device, dtype, **kwargs):
             noninvariant_base_kernel.outputscale = torch.tensor([0.01], device=device, dtype=dtype)
         invariant_base_kernel.outputscale = 1 - noninvariant_base_kernel.outputscale            
         return invariant_base_kernel + noninvariant_base_kernel
-        
-    elif label == "standard":
+    elif label in ["augmented", "standard"]:
         return base_kernel
     else:
         raise ValueError(f"Unknown kernel {label}")
@@ -141,10 +141,25 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
     train_x = torch.rand(1, run_config.d, device=run_config.device, dtype=run_config.dtype)
     train_y = f_noisy(train_x)
     
+    if run_config.eval_kernel == "augmented":
+        if run_config.objective_kernel == "permutation_invariant":
+            transformation_group = permutation_group
+        elif run_config.objective_kernel == "cyclic_invariant":
+            transformation_group = cyclic_group
+        else:
+            raise ValueError(f"Unknown objective kernel {run_config.objective_kernel} for selecting data augmentation.")
+        
+        def augment(train_x, train_y, new_x, new_y):
+            new_x_transformed = transformation_group(new_x).view(-1, run_config.d)
+            new_y_transformed = torch.stack([new_y for _ in new_x_transformed])
+            return torch.cat([train_x, new_x_transformed]), torch.cat([train_y, new_y_transformed])
+        
+        train_x, train_y = augment(torch.tensor([]), torch.tensor([]), train_x, train_y)        
+    
     # Create arrays to store reported values in
     reported_x = torch.empty((run_config.n_steps, run_config.d), device=run_config.device, dtype=run_config.dtype)
     reported_f = torch.empty((run_config.n_steps,), device=run_config.device, dtype=run_config.dtype)
-           
+
     for i in range(run_config.n_steps):
         # Update GP with training data
         if run_config.learn_noise:
@@ -173,6 +188,13 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         )
         # Make observation
         next_y = f_noisy(next_x)
+
+        # Update training data        
+        if run_config.eval_kernel == "augmented":
+            train_x, train_y = augment(train_x, train_y, next_x, next_y)
+        else:
+            train_x = torch.cat([train_x, next_x])
+            train_y = torch.cat([train_y, next_y])            
         
         # Report
         if reporting_rule == "latest":
@@ -189,10 +211,7 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
             raise ValueError(f"Unknown reporting rule {reporting_rule}")
         # Observe true function value
         next_reported_f = f(next_reported_x)
-        
-        # Update history
-        train_x = torch.cat([train_x, next_x])
-        train_y = torch.cat([train_y, next_y])
+        # Save
         reported_x[i] = next_reported_x.squeeze()
         reported_f[i] = next_reported_f
         
@@ -223,14 +242,13 @@ if __name__ == "__main__":
     if args.objective == "PermInv-2D":
         objective_kernel = "permutation_invariant"
         objective_n_init = 64
-        # objective_seed = 3
         objective_seed = 19
         noise_var = 0.01
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant"]
+        eval_kernels = ["standard", "permutation_invariant", "augmented"]
         acqf = args.acqf
-        n_steps = [128, 128]
+        n_steps = [128, 128, 128]
         output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
@@ -241,7 +259,7 @@ if __name__ == "__main__":
         noise_var = 0.01
         d = 3
         repeats = 32
-        eval_kernels = ["standard", "cyclic_invariant"]
+        eval_kernels = ["standard", "cyclic_invariant", "augmented"]
         acqf = args.acqf
         n_steps = [256, 256]
         output_file = f"experiments/synthetic/data/cyclinv3d_{acqf}.h5"
@@ -254,9 +272,9 @@ if __name__ == "__main__":
         noise_var = 0.01
         d = 6
         repeats = 32
-        eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant"]
+        eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant", "augmented"]
         acqf = args.acqf
-        n_steps = [640, 640, 640, 200]
+        n_steps = [640, 640, 640, 200, 200, 640]
         output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
@@ -265,7 +283,7 @@ if __name__ == "__main__":
         objective_n_init = 64
         objective_seed = 6
         noise_var = 0.01
-        learn_noise = True
+        learn_noise = False
         d = 2
         repeats = 16
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
@@ -281,7 +299,7 @@ if __name__ == "__main__":
         objective_n_init = 64
         objective_seed = 19 # 6 for 3d
         noise_var = 0.01
-        learn_noise = True
+        learn_noise = False
         d = 2
         repeats = 16
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
@@ -297,7 +315,7 @@ if __name__ == "__main__":
         objective_n_init = 64
         objective_seed = 19
         noise_var = 0.01
-        learn_noise = True
+        learn_noise = False
         d = 2
         repeats = 16
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
@@ -337,6 +355,8 @@ if __name__ == "__main__":
         h5.attrs["acqf"] = acqf
         h5.attrs["n_steps"] = n_steps
         h5.attrs["learn_noise"] = learn_noise
+        if acqf == "ucb":
+            h5.attrs["ucb_beta"] = acqf_kwargs["beta"]
         for eval_kernel in eval_kernels:
             h5.create_group(eval_kernel)
     
