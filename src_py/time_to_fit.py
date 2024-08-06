@@ -20,6 +20,7 @@ device = torch.device(args.device)
 n_points_to_fit = 64
 n_seeds = 64
 n_runs_per_seed = 64
+d = 6
 
 # Create synthetic objective
 f = create_synthetic_objective(
@@ -56,10 +57,10 @@ for label, kernel in kernels.items():
             # Seed RNG
             torch.manual_seed(seed)
             # Generate training data
-            x = torch.rand(n_points_to_fit, 6, device=device, dtype=torch.float64)
+            x = torch.rand(n_points_to_fit, d, device=device, dtype=torch.float64)
             # Augment, if required
             if "augmented" in label:
-                x_augmented = permutation_group(x).view(-1, 6)
+                x_augmented = permutation_group(x).reshape(-1, d)
                 x = torch.cat([x, x_augmented], dim=0)
             y = (f(x) + 0.01*torch.randn(x.shape[0], device=device)).to(dtype=torch.float64).unsqueeze(-1)
                         
@@ -67,7 +68,7 @@ for label, kernel in kernels.items():
             model = SingleTaskGP(x, y, covar_module=kernel)
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             """,
-            globals={'seed': seed, 'f': f, 'n_points_to_fit': n_points_to_fit, 'kernel': kernel, 'device': device, 'label': label},
+            globals={'seed': seed, 'f': f, 'n_points_to_fit': n_points_to_fit, 'kernel': kernel, 'device': device, 'label': label, 'd': d},
         ).timeit(n_runs_per_seed)
         
         times[i] = result.times[0]
