@@ -16,7 +16,7 @@ args = parser.parse_args()
 device = torch.device(args.device)
 
 # Options
-n_points_to_fit = 200
+n_points_to_fit = 128
 n_seeds = 10
 n_runs_per_seed = 10
 d = 6
