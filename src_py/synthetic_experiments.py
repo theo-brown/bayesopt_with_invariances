@@ -210,7 +210,7 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
 
 if __name__ == "__main__":   
     parser = argparse.ArgumentParser()
-    parser.add_argument("objective", type=str, choices=["PermInv-2D", "CyclInv-3D", "PermInv-6D", "QuasiPermInv-3D-0.01", "QuasiPermInv-3D-0.05"])
+    parser.add_argument("objective", type=str, choices=["PermInv-2D", "CyclInv-3D", "PermInv-6D", "QuasiPermInv-2D-0.01", "QuasiPermInv-2D-0.05",  "QuasiPermInv-2D-0.1"])
     parser.add_argument("acqf", type=str, choices=["ucb", "mvr"])
     parser.add_argument("--devices", type=str, nargs="*", default=[None])
     parser.add_argument("--n_processes", type=int, default=1)
@@ -257,34 +257,47 @@ if __name__ == "__main__":
         output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
-    elif args.objective == "QuasiPermInv-3D-0.01":
+    elif args.objective == "QuasiPermInv-2D-0.01":
         objective_kernel = "quasi_permutation_invariant"
-        objective_n_init = 256
+        objective_n_init = 64
         objective_seed = 6
         noise_var = 0.01
         learn_noise = True
-        d = 3
-        repeats = 32
+        d = 2
+        repeats = 16
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
-        n_steps = [256, 256, 256]
-        output_file = f"experiments/synthetic/data/quasiperminv3d_0.01_{acqf}.h5"
+        n_steps = [128, 128, 128]
+        output_file = f"experiments/synthetic/data/quasiperminv2d_0.01_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.01}
         eval_kernel_kwargs = {"noninvariant_scale": 0.01}
-    elif args.objective == "QuasiPermInv-3D-0.05":
+    elif args.objective == "QuasiPermInv-2D-0.05":
         objective_kernel = "quasi_permutation_invariant"
-        objective_n_init = 256
-        objective_seed = 6
+        objective_n_init = 64
+        objective_seed = 19 # 6 for 3d
         noise_var = 0.01
         learn_noise = True
-        d = 3
-        repeats = 32
+        d = 2
+        repeats = 16
         eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         acqf = args.acqf
-        n_steps = [256, 256, 256]
-        output_file = f"experiments/synthetic/data/quasiperminv3d_0.05_{acqf}.h5"
+        n_steps = [128, 128, 128]
+        output_file = f"experiments/synthetic/data/quasiperminv2d_0.05_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.05}
         eval_kernel_kwargs = {"noninvariant_scale": 0.05}
+    elif args.objective == "QuasiPermInv-2D-0.1":
+        objective_kernel = "quasi_permutation_invariant"
+        objective_n_init = 64
+        objective_seed = 19
+        noise_var = None
+        d = 2
+        repeats = 16
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        acqf = args.acqf
+        n_steps = [128, 128, 128]
+        output_file = f"experiments/synthetic/data/quasiperminv2d_0.1_{acqf}.h5"
+        objective_kernel_kwargs = {"noninvariant_scale": 0.1}
+        eval_kernel_kwargs = {"noninvariant_scale": 0.1}
         
     # Torch setup
     warnings.filterwarnings("ignore", category=InputDataWarning)
