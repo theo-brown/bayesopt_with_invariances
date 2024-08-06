@@ -326,7 +326,7 @@ if __name__ == "__main__":
     with h5py.File(output_file, 'w') as h5:
         h5.attrs["objective"] = args.objective
         h5.attrs["acqf"] = args.acqf
-        h5.attrs["devices"] = args.devices
+        h5.attrs["devices"] = [d if d is not None else '' for d in args.devices]
         h5.attrs["repeats"] = repeats
         h5.attrs["objective_kernel"] = objective_kernel
         h5.attrs["objective_n_init"] = objective_n_init
