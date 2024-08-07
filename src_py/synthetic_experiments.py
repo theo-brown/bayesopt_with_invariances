@@ -259,6 +259,7 @@ if __name__ == "__main__":
         objective_n_init = 64
         objective_seed = 19
         noise_var = 0.01
+        learn_noise = False
         d = 2
         repeats = 32
         eval_kernels = ["standard", "permutation_invariant", "constrained", "augmented"]
@@ -276,6 +277,7 @@ if __name__ == "__main__":
         objective_n_init = 256
         objective_seed = 2
         noise_var = 0.01
+        learn_noise = False
         d = 3
         repeats = 32
         eval_kernels = ["standard", "cyclic_invariant", "augmented"]
@@ -293,6 +295,7 @@ if __name__ == "__main__":
         objective_n_init = 512
         objective_seed = 0
         noise_var = 0.01
+        learn_noise = False
         d = 6
         repeats = 32
         eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant", "augmented"]
