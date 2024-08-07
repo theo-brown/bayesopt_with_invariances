@@ -314,7 +314,7 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 6
-        repeats = 32
+        repeats = 5
         # eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant", "augmented"]
         eval_kernels = ["constrained"]
         acqf = args.acqf
