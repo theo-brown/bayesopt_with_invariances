@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
 
+import constrained_permutation_invariant
 import gpytorch
 import h5py
 import torch
@@ -181,17 +182,17 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         if run_config.eval_kernel == "constrained":
             if run_config.objective_kernel != "permutation_invariant" and run_config.objective_kernel != "quasi_permutation_invariant":
                 raise ValueError("Constrained optimisation only supported for (quasi-) permutation invariant kernels.")
-            
-            def constraint_fn(x):
-               return torch.all(x[:-1] <= x[1:])
-           
             next_x, _ = optimize_acqf(
                 acqf(model, **run_config.acqf_kwargs),
                 bounds,
                 q=1,
                 num_restarts=8,
                 raw_samples=1024,
-                inequality_constraints=[(constraint_fn, True)],
+                nonlinear_inequality_constraints=[
+                    (c, True)
+                    for c in constrained_permutation_invariant.make_constraints(run_config.d)
+                ],
+                ic_generator=constrained_permutation_invariant.ic_generator,
             )
         else:
             next_x, _ = optimize_acqf(
@@ -215,13 +216,27 @@ def run(lock: torch.multiprocessing.Lock, run_config: RunConfig):
         if reporting_rule == "latest":
             next_reported_x = next_x 
         elif reporting_rule == "max_posterior_mean":
-            next_reported_x, _ = optimize_acqf(
-                PosteriorMean(model),
-                bounds,
-                q=1,
-                num_restarts=8,
-                raw_samples=1024,
-            )
+            if run_config.eval_kernel == "constrained":
+                next_reported_x, _ = optimize_acqf(
+                    PosteriorMean(model),
+                    bounds,
+                    q=1,
+                    num_restarts=8,
+                    raw_samples=1024,
+                    nonlinear_inequality_constraints=[
+                        (c, True)
+                        for c in constrained_permutation_invariant.make_constraints(run_config.d)
+                    ],
+                    ic_generator=constrained_permutation_invariant.ic_generator,
+                )
+            else:
+                next_reported_x, _ = optimize_acqf(
+                    PosteriorMean(model),
+                    bounds,
+                    q=1,
+                    num_restarts=8,
+                    raw_samples=1024,
+                )
         else:
             raise ValueError(f"Unknown reporting rule {reporting_rule}")
         # Observe true function value
@@ -261,10 +276,12 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 5
-        eval_kernels = ["standard", "permutation_invariant", "constrained", "augmented"]
+        repeats = 3
+        # eval_kernels = ["standard", "permutation_invariant", "constrained", "augmented"]
+        eval_kernels = ["constrained"]
         acqf = args.acqf
-        n_steps = [128, 128, 128, 128, 128]
+        # n_steps = [128, 128, 128, 128, 128]
+        n_steps = [128]
         output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
