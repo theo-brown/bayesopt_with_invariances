@@ -21,7 +21,7 @@ palette = list(tol_colors.tol_cset('bright'))
 if __name__=="__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("objective", type=str, choices=["perminv2d", "cyclinv3d", "perminv6d", "quasiperminv3d_0.2"])
+    parser.add_argument("objective", type=str, choices=["perminv2d", "cyclinv3d", "perminv6d", "quasiperminv2d_0.01", "quasiperminv2d_0.05", "quasiperminv2d_0.1"])
     parser.add_argument("acqf", type=str, choices=["ucb", "mvr"])
     args = parser.parse_args()
     
@@ -66,30 +66,42 @@ if __name__=="__main__":
         elif args.acqf == "mvr":
             ylim = [-0.05, 1.5]
             n_legend_cols = 2
-    elif args.objective == "quasiperminv3d_0.01":
-        objective = "QuasiPermInv-3D-0.01"
+    elif args.objective == "quasiperminv2d_0.01":
+        objective = "QuasiPermInv-2D-0.01"
         kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         kernel_labels = ["Standard", "Permutation invariant", "Additive"]
         colors = [palette[0], palette[2], palette[1]]
-        f_opt = 2.395
-        n_repeats = 32
-        xlim = [0, 256]
+        f_opt = 2.039
+        n_repeats = 16
+        xlim = [0, 128]
         if args.acqf == "ucb":
             ylim = [0, None]
         elif args.acqf == "mvr":
-            ylim = [0, None]
-    elif args.objective == "quasiperminv3d_0.05":
-        objective = "QuasiPermInv-3D-0.05"
+            ylim = [0, 2.2]
+    elif args.objective == "quasiperminv2d_0.05":
+        objective = "QuasiPermInv-2D-0.05"
         kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
         kernel_labels = ["Standard", "Permutation invariant", "Additive"]
         colors = [palette[0], palette[2], palette[1]]
-        f_opt = 2.395
-        n_repeats = 32
-        xlim = [0, 256]
+        f_opt = 1.325
+        n_repeats = 16
+        xlim = [0, 128]
         if args.acqf == "ucb":
             ylim = [0, None]
         elif args.acqf == "mvr":
+            ylim = [0, 1.4]
+    elif args.objective == "quasiperminv2d_0.1":
+        objective = "QuasiPermInv-2D-0.1"
+        kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
+        kernel_labels = ["Standard", "Permutation invariant", "Additive"]
+        colors = [palette[0], palette[2], palette[1]]
+        f_opt = 1.44
+        n_repeats = 16
+        xlim = [0, 128]
+        if args.acqf == "ucb":
             ylim = [0, None]
+        elif args.acqf == "mvr":
+            ylim = [0, 1.5]
         
     if args.acqf == "ucb":
         regret_label = "Cumulative regret"
@@ -105,7 +117,7 @@ if __name__=="__main__":
         with h5py.File(f"experiments/synthetic/data/{args.objective}_{args.acqf}.h5", "r") as h5:
             for i in range(n_repeats):
                 print(f"Loading {kernel}/{i}")
-                reported_f.append(h5[f"{kernel}/{i}/reported_f"][:])
+                reported_f.append(np.reshape(h5[f"{kernel}/{i}/reported_f"][:], -1))
         reported_f = np.vstack(reported_f)
         
         if args.acqf == "ucb":
@@ -123,7 +135,11 @@ if __name__=="__main__":
     plt.ylabel(regret_label)
     plt.ylim(ylim)
     plt.legend(ncol=n_legend_cols, columnspacing=0.8, handlelength=1, handletextpad=0.5, loc=legend_loc)  
-    plt.title(objective, fontsize=titlefontsize)
+    
+    if "quasi" in objective.lower():
+        plt.title(args.acqf.upper(), fontsize=titlefontsize)
+    else:
+        plt.title(objective, fontsize=titlefontsize)
+    
     plt.rcParams.update(params)
-
     plt.savefig(f"experiments/synthetic/figures/{args.objective}_{args.acqf}_regret.pdf", bbox_inches="tight")

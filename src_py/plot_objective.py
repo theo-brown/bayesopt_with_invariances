@@ -29,6 +29,7 @@ if args.objective == "PermInv-2D":
         n_initial_points=64,
     )
     output_filename = "experiments/synthetic/figures/perminv2d.pdf"
+    title = "PermInv-2D"
 elif args.objective == "QuasiPermInv-2D-0.01":
     f = create_synthetic_objective(
         d=2,
@@ -37,6 +38,7 @@ elif args.objective == "QuasiPermInv-2D-0.01":
         n_initial_points=64,
     )
     output_filename = "experiments/synthetic/figures/quasiperminv2d_0.01.pdf"
+    title = "Objective"
 elif args.objective == "QuasiPermInv-2D-0.05":
     f = create_synthetic_objective(
         d=2,
@@ -45,6 +47,7 @@ elif args.objective == "QuasiPermInv-2D-0.05":
         n_initial_points=64
     )
     output_filename = "experiments/synthetic/figures/quasiperminv2d_0.05.pdf"
+    title="Objective"
 elif args.objective == "QuasiPermInv-2D-0.1":
     f = create_synthetic_objective(
         d=2,
@@ -53,6 +56,7 @@ elif args.objective == "QuasiPermInv-2D-0.1":
         n_initial_points=64
     )
     output_filename = "experiments/synthetic/figures/quasiperminv2d_0.1.pdf"
+    title = "Objective"
 else:
     raise ValueError(f"Unknown objective: {args.objective}")
  
@@ -63,7 +67,7 @@ z = f(torch.stack([xx.flatten(), yy.flatten()], dim=-1)).reshape(xx.shape)
 
 # Plot 
 plt.figure()
-plt.title(args.objective)
+plt.title(title)
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
 plt.contourf(xx, yy, z, levels=20, cmap="viridis")
