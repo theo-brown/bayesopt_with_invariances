@@ -29,11 +29,11 @@ if __name__=="__main__":
     n_legend_cols = 1
     if args.objective == "perminv2d":
         objective = "PermInv-2D"
-        kernels = ["standard", "permutation_invariant"]
-        kernel_labels = ["Standard", "Invariant"]
-        colors = [palette[0], palette[1]]
+        kernels = ["standard", "constrained", "permutation_invariant"]
+        kernel_labels = ["Standard", "Constrained", "Invariant"]
+        colors = [palette[0], palette[5], palette[1]]
         # f_opt = 1.707
-        f_opt = 1.2202
+        f_opt = 1.20
         n_repeats = 32
         xlim = [0, 128]
         if args.acqf == "ucb":
@@ -55,9 +55,9 @@ if __name__=="__main__":
             # ylim=[None, None]
     elif args.objective == "perminv6d":
         objective = "PermInv-6D"
-        kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant"]
-        kernel_labels = ["Standard", "3-block invariant", "2-block invariant", "Fully invariant"]
-        colors = [palette[0], palette[2], palette[3], palette[1]]
+        kernels = ["standard", "constrained", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant"]
+        kernel_labels = ["Standard", "Constrained", "3-block invariant", "2-block invariant", "Fully invariant"]
+        colors = [palette[0], palette[5], palette[2], palette[3], palette[1]]
         f_opt = 1.1768
         n_repeats = 32
         xlim = [0, 640]
@@ -69,7 +69,7 @@ if __name__=="__main__":
     elif args.objective == "quasiperminv2d_0.01":
         objective = "QuasiPermInv-2D-0.01"
         kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
-        kernel_labels = ["Standard", "Permutation invariant", "Additive"]
+        kernel_labels = ["Standard", "Permutation invariant", "Quasi-invariant (truth)"]
         colors = [palette[0], palette[2], palette[1]]
         f_opt = 2.039
         n_repeats = 16
@@ -77,11 +77,11 @@ if __name__=="__main__":
         if args.acqf == "ucb":
             ylim = [0, None]
         elif args.acqf == "mvr":
-            ylim = [0, 2.2]
+            ylim = [-0.05, 2.2]
     elif args.objective == "quasiperminv2d_0.05":
         objective = "QuasiPermInv-2D-0.05"
         kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
-        kernel_labels = ["Standard", "Permutation invariant", "Additive"]
+        kernel_labels = ["Standard", "Permutation invariant", "Quasi-invariant (truth)"]
         colors = [palette[0], palette[2], palette[1]]
         f_opt = 1.325
         n_repeats = 16
@@ -89,11 +89,11 @@ if __name__=="__main__":
         if args.acqf == "ucb":
             ylim = [0, None]
         elif args.acqf == "mvr":
-            ylim = [0, 1.4]
+            ylim = [-0.05, 1.4]
     elif args.objective == "quasiperminv2d_0.1":
         objective = "QuasiPermInv-2D-0.1"
         kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant"]
-        kernel_labels = ["Standard", "Permutation invariant", "Additive"]
+        kernel_labels = ["Standard", "Permutation invariant", "Quasi-invariant (truth)"]
         colors = [palette[0], palette[2], palette[1]]
         f_opt = 1.44
         n_repeats = 16
@@ -101,7 +101,7 @@ if __name__=="__main__":
         if args.acqf == "ucb":
             ylim = [0, None]
         elif args.acqf == "mvr":
-            ylim = [0, 1.5]
+            ylim = [-0.05, 1.5]
         
     if args.acqf == "ucb":
         regret_label = "Cumulative regret"
@@ -117,7 +117,11 @@ if __name__=="__main__":
         with h5py.File(f"experiments/synthetic/data/{args.objective}_{args.acqf}.h5", "r") as h5:
             for i in range(n_repeats):
                 print(f"Loading {kernel}/{i}")
-                reported_f.append(np.reshape(h5[f"{kernel}/{i}/reported_f"][:], -1))
+                try:
+                    reported_f.append(np.reshape(h5[f"{kernel}/{i}/reported_f"][:], -1))
+                except KeyError:
+                    print(f"KeyError: {kernel}/{i}")
+                    continue
         reported_f = np.vstack(reported_f)
         
         if args.acqf == "ucb":

@@ -55,4 +55,4 @@ We provide the script used to run the experiment, but without access to JINTRAC 
 - [Figure 3biii](experiments/synthetic/figures/perminv6d_mvr_regret.pdf): ```python src_py/plot_regret.py perminv6d ucb```
 - [Figure 4ai](): ```python src_py/plot_fusion.py```
 - [Figure 4b](): ```python src_py/plot_fusion.py```
-- [Figure 5](experiments/synthetic/figures/benchmark.pdf): ```python src_py/plot_benchmark.py```
+- [Figure 5](experiments/synthetic/figures/time_benchmark.pdf): ```python src_py/plot_benchmark.py```
