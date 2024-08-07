@@ -261,7 +261,7 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 32
+        repeats = 5
         eval_kernels = ["standard", "permutation_invariant", "constrained", "augmented"]
         acqf = args.acqf
         n_steps = [128, 128, 128, 128, 128]
