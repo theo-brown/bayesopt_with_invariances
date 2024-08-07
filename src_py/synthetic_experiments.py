@@ -276,13 +276,11 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 5
-        # eval_kernels = ["standard", "permutation_invariant", "constrained", "augmented"]
-        eval_kernels = ["constrained"]
+        repeats = 32
+        eval_kernels = ["standard", "permutation_invariant", "constrained"]
         acqf = args.acqf
-        # n_steps = [128, 128, 128, 128, 128]
-        n_steps = [128]
-        output_file = f"experiments/synthetic/data/perminv2d_{acqf}_constrained.h5"
+        n_steps = [128, 128, 128]
+        output_file = f"experiments/synthetic/data/perminv2d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
         if acqf == "ucb":
@@ -297,9 +295,9 @@ if __name__ == "__main__":
         learn_noise = False
         d = 3
         repeats = 32
-        eval_kernels = ["standard", "cyclic_invariant", "augmented"]
+        eval_kernels = ["standard", "cyclic_invariant"]
         acqf = args.acqf
-        n_steps = [256, 256, 256]
+        n_steps = [256, 256]
         output_file = f"experiments/synthetic/data/cyclinv3d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
@@ -314,13 +312,11 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 6
-        repeats = 5
-        # eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant", "augmented"]
-        eval_kernels = ["constrained"]
+        repeats = 32
+        eval_kernels = ["standard", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant", "constrained"]
         acqf = args.acqf
-        # n_steps = [640, 640, 640, 200, 640]
-        n_steps = [640]
-        output_file = f"experiments/synthetic/data/perminv6d_{acqf}_constrained.h5"
+        n_steps = [640, 640, 640, 200, 640]
+        output_file = f"experiments/synthetic/data/perminv6d_{acqf}.h5"
         objective_kernel_kwargs = {}
         eval_kernel_kwargs = {}
         if acqf == "ucb":
@@ -334,10 +330,10 @@ if __name__ == "__main__":
         noise_var = 0.01
         learn_noise = False
         d = 2
-        repeats = 5
-        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained", "augmented"]
+        repeats = 32
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained"]
         acqf = args.acqf
-        n_steps = [128, 128, 128, 128, 128]
+        n_steps = [128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/quasiperminv2d_0.01_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.01}
         eval_kernel_kwargs = {"noninvariant_scale": 0.01}
@@ -353,9 +349,9 @@ if __name__ == "__main__":
         learn_noise = False
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained", "augmented"]
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained"]
         acqf = args.acqf
-        n_steps = [128, 128, 128, 128, 128]
+        n_steps = [128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/quasiperminv2d_0.05_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.05}
         eval_kernel_kwargs = {"noninvariant_scale": 0.05}
@@ -371,9 +367,9 @@ if __name__ == "__main__":
         learn_noise = False
         d = 2
         repeats = 32
-        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained", "augmented"]
+        eval_kernels = ["standard", "permutation_invariant", "quasi_permutation_invariant", "constrained"]
         acqf = args.acqf
-        n_steps = [128, 128, 128, 128, 128]
+        n_steps = [128, 128, 128, 128]
         output_file = f"experiments/synthetic/data/quasiperminv2d_0.1_{acqf}.h5"
         objective_kernel_kwargs = {"noninvariant_scale": 0.1}
         eval_kernel_kwargs = {"noninvariant_scale": 0.1}
