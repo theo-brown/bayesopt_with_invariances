@@ -1,6 +1,7 @@
 # Sample-efficient Bayesian Optimisation Using Known Invariances
 
-TLDR: Jump to [synthetic_experiments.py](https://github.com/theo-brown/bayesopt_with_invariances/blob/697f2b7163d50a1264e0effd955fef93d8cd8f49/src_py/synthetic_experiments.py#L109) to view the main code.
+TLDR: Jump to [synthetic_experiments.py](https://github.com/theo-brown/bayesopt_with_invariances/blob/697f2b7163d50a1264e0effd955fef93d8cd8f49/src_py/synthetic_experiments.py#L109) to view the main code for experiments.
+This repo depends on [theobrown/invariantkernels](https://github.com/theo-brown/invariantkernels).
 
 ### Repository structure
 ```
