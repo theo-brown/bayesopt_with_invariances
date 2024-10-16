@@ -1,6 +1,8 @@
 # Sample-efficient Bayesian Optimisation Using Known Invariances
 
-## Repository structure
+TLDR: Jump to [synthetic_experiments.py](https://github.com/theo-brown/bayesopt_with_invariances/blob/main/src_py/synthetic_experiments.py) to view the main code.
+
+### Repository structure
 ```
 .
 ├── README.md           # This file
@@ -17,9 +19,9 @@
 
 **Note**: the Julia code was not used to run the experiments in the paper, as it is only written to use CPUs rather than GPUs. We used it for rapid prototyping and the creation of a few illustrative figures only. The code in `src_py` should be viewed as the canonical code for our paper.
 
-## Reproducibility
+### Reproducibility
 
-### Data generation
+#### Data generation
 
 - Figure 1a: n/a
 - Figure 1b: n/a
@@ -41,7 +43,7 @@
 We provide the script used to run the experiment, but without access to JINTRAC and the appropriate STEP SPR45 configuration files the experiments will fail to run.
 
 
-### Figure generation
+#### Figure generation
 
 - [Figure 1a](experiments/synthetic/figures/permutation_group.pdf): ```julia --project src_jl/plot_permutation_group.jl```
 - [Figure 1b](experiments/synthetic/figures/cyclic_group.png): ```julia --project src_jl/plot_cyclic_group.jl```
