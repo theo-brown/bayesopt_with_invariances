@@ -6,13 +6,13 @@ from synthetic_experiments import get_kernel
 from synthetic_objective import create_synthetic_objective
 
 # Set font sizes
-params = {'legend.fontsize': 10,
+params = {'legend.fontsize': 14, #10,
           'figure.figsize': (4, 3),
-          'axes.labelsize': 10,
-          'xtick.labelsize': 8,
-          'ytick.labelsize': 8,
+          'axes.labelsize': 14, #10,
+          'xtick.labelsize': 12, #8,
+          'ytick.labelsize': 12, #8,
           'axes.titlepad': 5}
-titlefontsize = 12
+titlefontsize = 14 #12
 plt.rcParams.update(params)
 
 # Parse command line arguments

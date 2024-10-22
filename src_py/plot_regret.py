@@ -6,13 +6,13 @@ import numpy as np
 import tol_colors
 
 # Set font sizes
-params = {'legend.fontsize': 10,
+params = {'legend.fontsize': 14, #10,
           'figure.figsize': (4, 3),
-          'axes.labelsize': 10,
-          'xtick.labelsize': 8,
-          'ytick.labelsize': 8,
+          'axes.labelsize': 14, #10,
+          'xtick.labelsize': 12, #8,
+          'ytick.labelsize': 12, #8,
           'axes.titlepad': 5}
-titlefontsize = 12
+titlefontsize = 14 #12
 plt.rcParams.update(params)
 
 # Use TOL colors
@@ -37,7 +37,7 @@ if __name__=="__main__":
         n_repeats = 32
         xlim = [0, 128]
         if args.acqf == "ucb":
-            ylim = [0, None]
+            ylim = [0, 50]
         elif args.acqf == "mvr":
             ylim = [-0.05, 1.25]
     elif args.objective == "cyclinv3d":
@@ -56,15 +56,15 @@ if __name__=="__main__":
     elif args.objective == "perminv6d":
         objective = "PermInv-6D"
         kernels = ["standard", "constrained", "3_block_permutation_invariant", "2_block_permutation_invariant", "permutation_invariant"]
-        kernel_labels = ["Standard", "Constrained", "3-block invariant", "2-block invariant", "Fully invariant"]
+        kernel_labels = ["Standard", "Constrained", "3-block inv.", "2-block inv.", "Fully inv."]
         colors = [palette[0], palette[5], palette[2], palette[3], palette[1]]
         f_opt = 1.1768
         n_repeats = 32
         xlim = [0, 640]
         if args.acqf == "ucb":
-            ylim = [0, None]
+            ylim = [0, 800]
         elif args.acqf == "mvr":
-            ylim = [-0.05, 1.5]
+            ylim = [-0.05, 1.75]
             n_legend_cols = 2
     elif args.objective == "quasiperminv2d_0.01":
         objective = "QuasiPermInv-2D-0.01"
@@ -75,7 +75,7 @@ if __name__=="__main__":
         n_repeats = 16
         xlim = [0, 128]
         if args.acqf == "ucb":
-            ylim = [0, None]
+            ylim = [0, 70]
         elif args.acqf == "mvr":
             ylim = [-0.05, 2.2]
     elif args.objective == "quasiperminv2d_0.05":
@@ -87,7 +87,7 @@ if __name__=="__main__":
         n_repeats = 16
         xlim = [0, 128]
         if args.acqf == "ucb":
-            ylim = [0, None]
+            ylim = [0, 70]
         elif args.acqf == "mvr":
             ylim = [-0.05, 1.4]
     elif args.objective == "quasiperminv2d_0.1":
@@ -99,7 +99,7 @@ if __name__=="__main__":
         n_repeats = 16
         xlim = [0, 128]
         if args.acqf == "ucb":
-            ylim = [0, None]
+            ylim = [0, 70]
         elif args.acqf == "mvr":
             ylim = [-0.05, 1.5]
         
@@ -138,7 +138,7 @@ if __name__=="__main__":
     plt.xlim(xlim)
     plt.ylabel(regret_label)
     plt.ylim(ylim)
-    plt.legend(ncol=n_legend_cols, columnspacing=0.8, handlelength=1, handletextpad=0.5, loc=legend_loc)  
+    plt.legend(ncol=n_legend_cols, borderaxespad=0.1, columnspacing=0.6, handlelength=0.7, handletextpad=0.3, loc=legend_loc)  
     
     if "quasi" in objective.lower():
         plt.title(args.acqf.upper(), fontsize=titlefontsize)

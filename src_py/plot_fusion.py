@@ -1,30 +1,30 @@
-from pathlib import Path 
-import h5py 
+from pathlib import Path
+
+import h5py
+import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt 
-import tol_colors 
+import tol_colors
 
-root_dir = Path("XXXXXXXXXXXXXX")
-
-directories = [
-    root_dir/f"ucb_fixedkernel_{kernel}_n=12_seed={i}"
-    for kernel in ["standard", "3blockinvariant"]  
+files = [
+    Path(f"experiments/fusion/data/ucb_fixedkernel_{kernel}_n=12_seed={i}_results.h5")
+    for kernel in ["standard", "3blockinvariant"]
+    for i in range(1, 6)
 ]
 
 palette = list(tol_colors.tol_cset('bright'))
-params = {'legend.fontsize': 10,
+params = {'legend.fontsize': 14, #10,
           'figure.figsize': (6, 3),
-          'axes.labelsize': 10,
-          'xtick.labelsize': 8,
-          'ytick.labelsize': 8,
+          'axes.labelsize': 14, #10,
+          'xtick.labelsize': 12, #8,
+          'ytick.labelsize': 12, #8,
           'axes.titlepad': 5}
-titlefontsize = 12
+titlefontsize = 14 #12
 plt.rcParams.update(params)
 standard = []
 invariant = []
 
-for directory in directories:
-    with h5py.File(directory/"results.h5", "r") as f:
+for fname in files:
+    with h5py.File(fname, "r") as f:
         best_value_per_step = []
         for i, group in enumerate(f):
             if "optimisation_step" not in str(group):
@@ -42,9 +42,9 @@ for directory in directories:
                 continue             
 
         
-    if "standard" in str(directory):
+    if "standard" in str(fname):
         standard.append(best_value_per_step)
-    if "invariant" in str(directory):
+    if "invariant" in str(fname):
         invariant.append(best_value_per_step)
             
 # Pad arrays with nans to be the same length
@@ -73,11 +73,11 @@ invariant_x = range(0, len(invariant_mean))
 plt.plot(invariant_x, invariant_mean, color=palette[1], label="Invariant")
 # plt.fill_between(invariant_x, invariant_mean + invariant_std, invariant_mean - invariant_std, facecolor=palette[1], alpha=0.3)
 plt.xlim(0, 16)
-plt.legend(loc="upper left")
+plt.legend(loc="lower right", borderaxespad=0.1,)
 plt.xlabel("Optimisation step")
 plt.ylabel("Objective value")
 plt.title("Safety factor optimisation", fontsize=titlefontsize)
-plt.savefig("safety_factor_progress.pdf", bbox_inches="tight")
+plt.savefig("experiments/fusion/figures/safety_factor_progress.pdf", bbox_inches="tight")
 
 
 def gaussian(x: np.ndarray, mean: float, std: float, height: float = 1.0) -> np.ndarray:
@@ -104,14 +104,15 @@ def sum_of_gaussians_fixed_width_fixed_height_profile(xrho: np.ndarray, paramete
 parameters = np.array([0., 0.02, 0.1, 0.2, 0.3])
 xrho = np.linspace(0, 1, 150)
 
+plt.figure()
 plt.plot(xrho, sum_of_gaussians_fixed_width_fixed_height_profile(xrho, parameters), color='k', linestyle='--', label="Total")
 for i, p in enumerate(parameters):
     g = gaussian(xrho, p, 0.05, 1)
     # plt.plot(xrho, g, color=palette[i], label='_Launcher {i}')
     plt.fill_between(xrho, np.zeros_like(xrho), g, color=palette[i], label=f'Launcher {i+1}', zorder=len(parameters)-i, alpha=0.7)
-plt.xlim(0, 0.6)
+plt.xlim(0, 0.8)
 plt.ylim(0, None)
-plt.legend()
+plt.legend(borderaxespad=0.1)
 plt.xlabel("Normalised radial position")
-plt.ylabel("Normalised power deposition")
-plt.savefig("ecrh_profile.pdf", bbox_inches="tight")
+plt.ylabel("Normalised power\ndeposition")
+plt.savefig("experiments/fusion/figures/ecrh_profile.pdf", bbox_inches="tight")
