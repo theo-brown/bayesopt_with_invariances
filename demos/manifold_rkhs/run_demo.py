@@ -33,7 +33,7 @@ from scipy.stats import qmc
 from groups import (apply_permutation, cyclic_permutation_group,
                     cyclic_rotation_group, octahedral_rotation_group,
                     permutation_group)
-from kernels import NU, OrbitAveragedKernel, SphereMatern, WrappedMatern52
+from kernels import OrbitAveragedKernel, SphereMatern, WrappedMatern52
 from mvr import run_mvr
 from targets import (SphereTarget, TorusTarget, make_sphere_target,
                      make_torus_target, sphere_needle_coeffs,
@@ -361,32 +361,6 @@ def plot_target_sphere(ax, exp):
 REGRET_FLOOR = 2e-4  # display floor; regret 0 = exact optimum on candidates
 
 
-def plot_theory_rate(ax, exp, results, n_obs):
-    """Overlay the theoretical MVR rate from Brown et al. (2024), Thm 1:
-    gamma_T^G = O~(T^{m/(2nu+m)} / |G|), hence simple regret
-    r_T = O~(B |G|^{-1/2} T^{-nu/(2nu+m)}), with m the manifold dimension.
-    Constants and polylog factors are unknown, so the vanilla guide is
-    anchored to the vanilla curve one-third of the way in; the invariant
-    guide is then fixed by the theoretical |G|^{-1/2} offset."""
-    m = exp["candidates"].shape[1] if exp["manifold"] == "torus" else 2
-    alpha = NU / (2.0 * NU + m)
-    i0 = len(n_obs) // 3
-    anchor = np.mean(results["vanilla"]["regret"], axis=0)[i0]
-    if anchor <= REGRET_FLOOR:
-        return
-    span = slice(i0, None)
-    scale = anchor * n_obs[i0] ** alpha
-    guide = scale * n_obs[span] ** (-alpha)
-    offset = 1.0 / np.sqrt(len(exp["group"]))
-    ax.plot(n_obs[span], guide, color=SERIES["vanilla"], linestyle=(0, (4, 3)),
-            linewidth=1.4, alpha=0.65,
-            label=f"$\\propto T^{{-{alpha:.2f}}}$ (theory)")
-    ax.plot(n_obs[span], np.maximum(offset * guide, REGRET_FLOOR),
-            color=SERIES["invariant"], linestyle=(0, (4, 3)),
-            linewidth=1.4, alpha=0.65,
-            label="$\\times\\, |G|^{-1/2}$ (theory)")
-
-
 def plot_regret(ax, exp, results):
     n_obs = N_INIT + np.arange(exp["n_iter"])
     clipped = False
@@ -413,7 +387,6 @@ def plot_regret(ax, exp, results):
         cert = np.mean(results[kname]["cert"], axis=0)
         ax.plot(n_obs, cert, color=color, linestyle=":", linewidth=1.4,
                 alpha=0.65, label="$2B\\sup_x \\sigma_t$ (bound)")
-    plot_theory_rate(ax, exp, results, n_obs)
     ax.set_yscale("log")
     # The certificate starts near 2B, far above the empirical regret; cap
     # the axis so it enters the frame as it decays instead of stretching it.
@@ -464,10 +437,66 @@ def make_figure(exp, results, path):
 
 # ---------------------------------------------------------------------------
 
-ALL_EXPERIMENTS = ["torus2_S2", "torus3_C3", "torus3_S3", "sphere_C5",
-                   "sphere_oct",
-                   "torus2_S2_needle", "torus3_C3_needle", "torus3_S3_needle",
+ALL_EXPERIMENTS = ["torus2_S2_needle", "torus3_C3_needle", "torus3_S3_needle",
                    "sphere_C5_needle", "sphere_oct_needle"]
+
+# Short label, |G|, and series color (categorical palette order) per
+# experiment, for the ratio summary figure.
+RATIO_SPEC = {
+    "torus2_S2_needle": ("$T^2$, $S_2$", 2, "#2a78d6"),
+    "torus3_C3_needle": ("$T^3$, $C_3$", 3, "#eb6834"),
+    "torus3_S3_needle": ("$T^3$, $S_3$", 6, "#1baf7a"),
+    "sphere_C5_needle": ("$S^2$, $C_5$", 5, "#eda100"),
+    "sphere_oct_needle": ("$S^2$, $O$", 24, "#e87ba4"),
+}
+
+
+def make_ratio_figure(path):
+    """Constant-free comparison with the theory: the unknown constants and
+    polylog factors in the Theorem 1 rate are shared between the two kernels,
+    so the ratio of mean simple regrets r_vanilla / r_invariant is directly
+    comparable with the theoretical |G|^{1/2} offset (dashed levels)."""
+    import os
+    fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    plotted = False
+    for name, (label, g_order, color) in RATIO_SPEC.items():
+        f = f"results/{name}.npz"
+        if not os.path.exists(f):
+            continue
+        data = np.load(f)
+        mean_v = np.maximum(np.mean(data["vanilla_regret"], axis=0),
+                            REGRET_FLOOR)
+        mean_i = np.maximum(np.mean(data["invariant_regret"], axis=0),
+                            REGRET_FLOOR)
+        ratio = mean_v / mean_i
+        n_obs = N_INIT + np.arange(ratio.size)
+        ax.plot(n_obs, ratio, color=color, linewidth=2)
+        ax.axhline(np.sqrt(g_order), color=color, linestyle=(0, (4, 3)),
+                   linewidth=1.2, alpha=0.55)
+        ax.annotate(label, (n_obs[-1], ratio[-1]), xytext=(6, 0),
+                    textcoords="offset points", color=color, fontsize=9,
+                    va="center")
+        plotted = True
+    if not plotted:
+        plt.close(fig)
+        return
+    ax.set_yscale("log")
+    ax.set_xlabel("Observations")
+    ax.set_ylabel("Simple-regret ratio, vanilla / invariant")
+    ax.set_title("Empirical regret ratio (solid) vs theoretical "
+                 "$\\sqrt{|G|}$ offset (dashed)", fontsize=11, color=TEXT)
+    from matplotlib.lines import Line2D
+    ax.legend(handles=[
+        Line2D([], [], color=TEXT_2, linewidth=2, label="empirical ratio"),
+        Line2D([], [], color=TEXT_2, linestyle=(0, (4, 3)), linewidth=1.2,
+               label="$\\sqrt{|G|}$ (theory, Thm 1)"),
+    ], frameon=False, fontsize=9, loc="upper left")
+    style_axes(ax)
+    ax.margins(x=0.14)
+    fig.tight_layout()
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+    print(f"  wrote {path}", flush=True)
 
 
 def main():
@@ -482,6 +511,7 @@ def main():
                     for kname, traces in results.items()
                     for key, arr in traces.items()})
         make_figure(exp, results, f"plots/{name}.png")
+    make_ratio_figure("plots/ratio_summary.png")
 
 
 if __name__ == "__main__":

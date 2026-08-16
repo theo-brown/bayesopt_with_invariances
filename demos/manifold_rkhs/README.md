@@ -59,16 +59,18 @@ experiment's fixed reference norm `B_REF` (12, 19, 15, 12 and 6 for the five
 experiments below), so all worlds are exactly equally "hard" in RKHS-norm
 terms. The plotted target panel shows world 0.
 
+The benchmark suite consists of the five needle experiments (the strongest
+form of the construction; see below). The plain smooth variants remain
+available by name (e.g. `python run_demo.py torus2_S2`) but are not part of
+the default run.
+
 | Name | Manifold | Group | \|G\| | Active modes | Budget |
 |------|----------|-------|------|--------------|--------|
-| `torus2_S2` | T² | permutations S₂ | 2 | 625 | 80 |
-| `torus3_C3` | T³ | cyclic shifts C₃ | 3 | 2197 | 150 |
-| `torus3_S3` | T³ | permutations S₃ | 6 | 2197 | 150 |
-| `sphere_C5` | S² | z-rotations C₅ | 5 | 676 | 150 |
-| `sphere_oct` | S² | octahedral rotations | 24 | 676 | 150 |
-
-Each experiment also has a `*_needle` variant (same group, budget and smooth
-component; see below).
+| `torus2_S2_needle` | T² | permutations S₂ | 2 | 625 | 80 |
+| `torus3_C3_needle` | T³ | cyclic shifts C₃ | 3 | 2197 | 150 |
+| `torus3_S3_needle` | T³ | permutations S₃ | 6 | 2197 | 150 |
+| `sphere_C5_needle` | S² | z-rotations C₅ | 5 | 676 | 150 |
+| `sphere_oct_needle` | S² | octahedral rotations | 24 | 676 | 150 |
 
 ## Planted needle variants
 
@@ -100,15 +102,17 @@ Note the active-mode counts: 625–2197 versus the original 64–512 atoms, and 
 unlike atoms at sampleable locations — there is no set of input points whose
 observation linearly determines the target with fewer samples than modes.
 
-The regret panels overlay the theoretical MVR rate from Brown et al. (2024),
-Theorem 1: the information gain satisfies `γ_T^G = Õ(T^{m/(2ν+m)}/|G|)` (m =
-manifold dimension), giving simple regret `r_T = Õ(B |G|^{-1/2}
-T^{-ν/(2ν+m)})`. Since constants and polylog factors are not specified by the
-theory, the vanilla guide line is anchored to the vanilla curve one-third of
-the way through the run, and the invariant guide is placed at exactly the
-theoretical `|G|^{-1/2}` offset below it. Both kernels share the same slope
-in T; the |G| separation is the theory's testable prediction (an upper
-bound, so the empirical invariant curves may — and do — fall well below it).
+### Ratio comparison with the theory
+
+Theorem 1 of Brown et al. (2024) gives `γ_T^G = Õ(T^{m/(2ν+m)}/|G|)` (m =
+manifold dimension), hence an MVR simple-regret rate `r_T = Õ(B |G|^{-1/2}
+T^{-ν/(2ν+m)})`. The constants and polylog factors are unspecified, but they
+are *shared* between the vanilla (|G| = 1) and invariant kernels, so the
+constant-free comparison is the **ratio** of mean simple regrets: the theory
+predicts `r_vanilla / r_invariant ≈ √|G|`. `plots/ratio_summary.png` plots
+this empirical ratio for every experiment against its dashed `√|G|` level.
+Being an upper-bound prediction, the empirical ratios may — and mostly do —
+sit well above it.
 
 ### Non-asymptotic regret certificate
 
