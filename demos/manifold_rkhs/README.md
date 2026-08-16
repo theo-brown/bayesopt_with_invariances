@@ -98,6 +98,28 @@ theoretical `|G|^{-1/2}` offset below it. Both kernels share the same slope
 in T; the |G| separation is the theory's testable prediction (an upper
 bound, so the empirical invariant curves may — and do — fall well below it).
 
+### Non-asymptotic regret certificate
+
+Because the targets' RKHS norm `B = ‖f‖_{H_k}` is *exactly* known, the demos
+also plot a fully computable, non-asymptotic upper bound on simple regret. In
+the noise-free RKHS setting, Cauchy–Schwarz in the RKHS gives
+`|f(x) − μ_t(x)| ≤ B σ_t(x)` for every `x` — the posterior standard deviation
+`σ_t` is precisely the power function, the worst-case interpolation error over
+the unit ball of the RKHS. Hence the incumbent's simple regret satisfies
+
+```
+r_t ≤ 2 B max_x σ_t(x)
+```
+
+over the candidate set. The MVR loop already computes the posterior variance
+at every candidate each iteration, so the certificate costs nothing extra; it
+is logged (`max_sd` in the saved results) and drawn as a dotted curve in the
+regret panels. This is only possible here because `B` is exactly known — with
+an estimated or bounded norm the certificate would be heuristic. Being a true
+worst-case-over-the-RKHS-ball bound, it necessarily sits well above the
+typical-case empirical regret; the point is that it decays and is *rigorous*,
+holding for every run rather than on average.
+
 ## Files
 
 - `kernels.py` — wrapped torus Matérn-5/2, truncated sphere Matérn, plain

@@ -224,14 +224,18 @@ def run_experiment(exp: dict) -> dict:
     results = {}
     for kname, kern in kernels.items():
         t0 = time.time()
-        regrets = np.stack([
+        runs = [
             run_mvr(kern, f_cand, exp["candidates"], N_INIT, exp["n_iter"],
                     NOISE_SD, seed=1000 + rep)
             for rep in range(N_REPEATS)
-        ])
-        results[kname] = regrets
+        ]
+        results[kname] = {
+            "regret": np.stack([r["regret"] for r in runs]),
+            "max_sd": np.stack([r["max_sd"] for r in runs]),
+        }
         print(f"  {exp['name']} / {kname}: {time.time() - t0:.1f}s, "
-              f"final mean regret {np.mean(regrets[:, -1]):.4f}", flush=True)
+              f"final mean regret "
+              f"{np.mean(results[kname]['regret'][:, -1]):.4f}", flush=True)
     return results
 
 
@@ -318,7 +322,7 @@ def plot_theory_rate(ax, exp, results, n_obs):
     m = exp["candidates"].shape[1] if exp["manifold"] == "torus" else 2
     alpha = NU / (2.0 * NU + m)
     i0 = len(n_obs) // 3
-    anchor = np.mean(results["vanilla"], axis=0)[i0]
+    anchor = np.mean(results["vanilla"]["regret"], axis=0)[i0]
     if anchor <= REGRET_FLOOR:
         return
     span = slice(i0, None)
@@ -336,13 +340,16 @@ def plot_theory_rate(ax, exp, results, n_obs):
 
 def plot_regret(ax, exp, results):
     n_obs = N_INIT + np.arange(exp["n_iter"])
+    B = exp["target"].rkhs_norm
     clipped = False
+    max_mean_regret = 0.0
     for kname, label in [("vanilla", "Vanilla kernel"),
                          ("invariant", "Orbit-averaged kernel")]:
-        r = results[kname]
+        r = results[kname]["regret"]
         mean = np.mean(r, axis=0)
         stderr = np.std(r, axis=0, ddof=1) / np.sqrt(r.shape[0])
         clipped = clipped or bool(np.any(mean < REGRET_FLOOR))
+        max_mean_regret = max(max_mean_regret, float(np.max(mean)))
         color = SERIES[kname]
         ax.plot(n_obs, np.maximum(mean, REGRET_FLOOR), color=color,
                 linewidth=2, label=label)
@@ -352,8 +359,16 @@ def plot_regret(ax, exp, results):
         ax.annotate(label, (n_obs[-1], max(mean[-1], REGRET_FLOOR)),
                     xytext=(6, 0), textcoords="offset points",
                     color=color, fontsize=9, va="center")
+        # Non-asymptotic certificate: r_t <= 2 B sup_x sigma_t(x), valid
+        # because the target's RKHS norm B is exactly known.
+        cert = 2.0 * B * np.mean(results[kname]["max_sd"], axis=0)
+        ax.plot(n_obs, cert, color=color, linestyle=":", linewidth=1.4,
+                alpha=0.65, label="$2B\\sup_x \\sigma_t$ (bound)")
     plot_theory_rate(ax, exp, results, n_obs)
     ax.set_yscale("log")
+    # The certificate starts near 2B, far above the empirical regret; cap
+    # the axis so it enters the frame as it decays instead of stretching it.
+    ax.set_ylim(top=4.0 * max_mean_regret)
     ax.set_xlabel("Observations")
     ax.set_ylabel("Simple regret")
     ax.set_title(f"MVR, mean $\\pm$ s.e. over {N_REPEATS} runs",
@@ -407,7 +422,10 @@ def main():
         print(f"  target: {exp['n_modes']} modes, "
               f"||f||_H = {exp['target'].rkhs_norm:.3f}", flush=True)
         results = run_experiment(exp)
-        np.savez(f"results/{name}.npz", **results)
+        np.savez(f"results/{name}.npz",
+                 **{f"{kname}_{key}": arr
+                    for kname, traces in results.items()
+                    for key, arr in traces.items()})
         make_figure(exp, results, f"plots/{name}.png")
 
 

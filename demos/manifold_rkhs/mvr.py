@@ -14,8 +14,15 @@ from scipy.linalg import cho_factor, cho_solve, solve_triangular
 
 def run_mvr(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
             n_init: int, n_iter: int, noise_sd: float,
-            seed: int) -> np.ndarray:
-    """Run MVR and return simple regret after each of the n_iter iterations.
+            seed: int) -> dict:
+    """Run MVR and return per-iteration traces.
+
+    Returns a dict with two length-n_iter arrays:
+      "regret" : simple regret of the incumbent after each iteration
+      "max_sd" : maximum posterior standard deviation over the candidate
+                 set, sup_x sigma_t(x) — the quantity entering the
+                 noise-free RKHS regret certificate r_t <= 2 B sup_x
+                 sigma_t(x) for targets with known RKHS norm B.
 
     Parameters
     ----------
@@ -36,6 +43,7 @@ def run_mvr(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
          + noise_sd * rng.standard_normal(n_init)).tolist()
 
     regret = np.empty(n_iter)
+    max_sd = np.empty(n_iter)
     for t in range(n_iter):
         k_tt = k_tc[:, train_idx]
         k_tt = 0.5 * (k_tt + k_tt.T)  # symmetrise fp noise
@@ -46,8 +54,10 @@ def run_mvr(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
         v = solve_triangular(chol, k_tc, lower=True)
         var = np.maximum(prior_var - np.sum(v**2, axis=0), 0.0)
 
-        # Incumbent and regret for this iteration
+        # Incumbent and regret for this iteration, plus the maximum
+        # posterior standard deviation (for the regret certificate)
         regret[t] = f_max - f_candidates[int(np.argmax(mean))]
+        max_sd[t] = np.sqrt(np.max(var))
 
         # MVR query: maximum posterior variance
         nxt = int(np.argmax(var))
@@ -56,4 +66,4 @@ def run_mvr(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
                                             candidates)])
         y.append(f_candidates[nxt] + noise_sd * rng.standard_normal())
 
-    return regret
+    return {"regret": regret, "max_sd": max_sd}
