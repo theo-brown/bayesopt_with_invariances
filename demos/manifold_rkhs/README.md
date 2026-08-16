@@ -56,8 +56,8 @@ comparing the vanilla kernel against the orbit-averaged kernel. 10 repeats,
 | `torus2_S2` | T² | permutations S₂ | 2 | 625 | 80 |
 | `torus3_C3` | T³ | cyclic shifts C₃ | 3 | 2197 | 150 |
 | `torus3_S3` | T³ | permutations S₃ | 6 | 2197 | 150 |
-| `sphere_C5` | S² | z-rotations C₅ | 5 | 676 | 80 |
-| `sphere_oct` | S² | octahedral rotations | 24 | 676 | 80 |
+| `sphere_C5` | S² | z-rotations C₅ | 5 | 676 | 150 |
+| `sphere_oct` | S² | octahedral rotations | 24 | 676 | 150 |
 
 Note the active-mode counts: 625–2197 versus the original 64–512 atoms, and —
 unlike atoms at sampleable locations — there is no set of input points whose

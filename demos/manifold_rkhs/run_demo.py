@@ -118,9 +118,9 @@ def build_experiment(name: str) -> dict:
                  else "$S^2$, octahedral rotation group $O$")
         base = SphereMatern(max_degree=max_degree, kappa=kappa)
         target = make_sphere_target(max_degree, base.coeffs, group, seed=100)
-        cands = fibonacci_sphere(3000)
+        cands = fibonacci_sphere(4096)
         return dict(name=name, manifold="sphere", label=label, group=group,
-                    base=base, target=target, candidates=cands, n_iter=80,
+                    base=base, target=target, candidates=cands, n_iter=150,
                     n_modes=(max_degree + 1) ** 2)
     else:
         raise ValueError(name)
@@ -205,19 +205,25 @@ def plot_target_sphere(ax, exp):
     return im
 
 
+REGRET_FLOOR = 2e-4  # display floor; regret 0 = exact optimum on candidates
+
+
 def plot_regret(ax, exp, results):
     n_obs = N_INIT + np.arange(exp["n_iter"])
+    clipped = False
     for kname, label in [("vanilla", "Vanilla kernel"),
                          ("invariant", "Orbit-averaged kernel")]:
         r = results[kname]
         mean = np.mean(r, axis=0)
         stderr = np.std(r, axis=0, ddof=1) / np.sqrt(r.shape[0])
+        clipped = clipped or bool(np.any(mean < REGRET_FLOOR))
         color = SERIES[kname]
-        ax.plot(n_obs, np.maximum(mean, 1e-8), color=color, linewidth=2,
-                label=label)
-        ax.fill_between(n_obs, np.maximum(mean - stderr, 1e-8),
-                        mean + stderr, color=color, alpha=0.18, linewidth=0)
-        ax.annotate(label, (n_obs[-1], max(mean[-1], 1e-8)),
+        ax.plot(n_obs, np.maximum(mean, REGRET_FLOOR), color=color,
+                linewidth=2, label=label)
+        ax.fill_between(n_obs, np.maximum(mean - stderr, REGRET_FLOOR),
+                        np.maximum(mean + stderr, REGRET_FLOOR),
+                        color=color, alpha=0.18, linewidth=0)
+        ax.annotate(label, (n_obs[-1], max(mean[-1], REGRET_FLOOR)),
                     xytext=(6, 0), textcoords="offset points",
                     color=color, fontsize=9, va="center")
     ax.set_yscale("log")
@@ -228,6 +234,7 @@ def plot_regret(ax, exp, results):
     ax.legend(frameon=False, fontsize=9, loc="lower left")
     style_axes(ax)
     ax.margins(x=0.12)
+    return clipped
 
 
 def make_figure(exp, results, path):
@@ -240,7 +247,12 @@ def make_figure(exp, results, path):
         im = plot_target_torus(ax1, exp)
     fig.colorbar(im, ax=ax1, shrink=0.85, label="$f(x)$")
     ax2 = fig.add_subplot(1, 2, 2)
-    plot_regret(ax2, exp, results)
+    clipped = plot_regret(ax2, exp, results)
+    if clipped:
+        fig.text(0.985, 0.012,
+                 "curves at the axis floor reached regret 0 "
+                 "(exact optimum on the candidate set)",
+                 ha="right", fontsize=8, color=TEXT_2)
     fig.suptitle(
         f"{exp['label']}  —  |G| = {len(exp['group'])},  "
         f"{exp['n_modes']} active modes,  "
