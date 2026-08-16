@@ -88,6 +88,16 @@ Note the active-mode counts: 625–2197 versus the original 64–512 atoms, and 
 unlike atoms at sampleable locations — there is no set of input points whose
 observation linearly determines the target with fewer samples than modes.
 
+The regret panels overlay the theoretical MVR rate from Brown et al. (2024),
+Theorem 1: the information gain satisfies `γ_T^G = Õ(T^{m/(2ν+m)}/|G|)` (m =
+manifold dimension), giving simple regret `r_T = Õ(B |G|^{-1/2}
+T^{-ν/(2ν+m)})`. Since constants and polylog factors are not specified by the
+theory, the vanilla guide line is anchored to the vanilla curve one-third of
+the way through the run, and the invariant guide is placed at exactly the
+theoretical `|G|^{-1/2}` offset below it. Both kernels share the same slope
+in T; the |G| separation is the theory's testable prediction (an upper
+bound, so the empirical invariant curves may — and do — fall well below it).
+
 ## Files
 
 - `kernels.py` — wrapped torus Matérn-5/2, truncated sphere Matérn, plain

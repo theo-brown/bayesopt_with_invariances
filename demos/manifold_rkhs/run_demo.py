@@ -30,7 +30,7 @@ from scipy.stats import qmc
 from groups import (apply_permutation, cyclic_permutation_group,
                     cyclic_rotation_group, octahedral_rotation_group,
                     permutation_group)
-from kernels import OrbitAveragedKernel, SphereMatern, WrappedMatern52
+from kernels import NU, OrbitAveragedKernel, SphereMatern, WrappedMatern52
 from mvr import run_mvr
 from targets import (SphereTarget, TorusTarget, make_sphere_target,
                      make_torus_target, sphere_needle_coeffs,
@@ -308,6 +308,32 @@ def plot_target_sphere(ax, exp):
 REGRET_FLOOR = 2e-4  # display floor; regret 0 = exact optimum on candidates
 
 
+def plot_theory_rate(ax, exp, results, n_obs):
+    """Overlay the theoretical MVR rate from Brown et al. (2024), Thm 1:
+    gamma_T^G = O~(T^{m/(2nu+m)} / |G|), hence simple regret
+    r_T = O~(B |G|^{-1/2} T^{-nu/(2nu+m)}), with m the manifold dimension.
+    Constants and polylog factors are unknown, so the vanilla guide is
+    anchored to the vanilla curve one-third of the way in; the invariant
+    guide is then fixed by the theoretical |G|^{-1/2} offset."""
+    m = exp["candidates"].shape[1] if exp["manifold"] == "torus" else 2
+    alpha = NU / (2.0 * NU + m)
+    i0 = len(n_obs) // 3
+    anchor = np.mean(results["vanilla"], axis=0)[i0]
+    if anchor <= REGRET_FLOOR:
+        return
+    span = slice(i0, None)
+    scale = anchor * n_obs[i0] ** alpha
+    guide = scale * n_obs[span] ** (-alpha)
+    offset = 1.0 / np.sqrt(len(exp["group"]))
+    ax.plot(n_obs[span], guide, color=SERIES["vanilla"], linestyle=(0, (4, 3)),
+            linewidth=1.4, alpha=0.65,
+            label=f"$\\propto T^{{-{alpha:.2f}}}$ (theory)")
+    ax.plot(n_obs[span], np.maximum(offset * guide, REGRET_FLOOR),
+            color=SERIES["invariant"], linestyle=(0, (4, 3)),
+            linewidth=1.4, alpha=0.65,
+            label="$\\times\\, |G|^{-1/2}$ (theory)")
+
+
 def plot_regret(ax, exp, results):
     n_obs = N_INIT + np.arange(exp["n_iter"])
     clipped = False
@@ -326,6 +352,7 @@ def plot_regret(ax, exp, results):
         ax.annotate(label, (n_obs[-1], max(mean[-1], REGRET_FLOOR)),
                     xytext=(6, 0), textcoords="offset points",
                     color=color, fontsize=9, va="center")
+    plot_theory_rate(ax, exp, results, n_obs)
     ax.set_yscale("log")
     ax.set_xlabel("Observations")
     ax.set_ylabel("Simple regret")
