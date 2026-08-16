@@ -150,6 +150,41 @@ def test_sphere_norm_consistency():
     check("sphere RKHS norm (interpolation)", rel, 1e-2)
 
 
+def test_needle_targets():
+    """Needle-augmented targets: still exactly invariant, real-valued, and
+    peaked on the hidden orbit."""
+    import run_demo as rd
+
+    for name in ["torus2_S2_needle", "torus3_S3_needle", "sphere_oct_needle"]:
+        exp = rd.build_experiment(name)
+        f, group = exp["target"], exp["group"]
+        rng = np.random.default_rng(12)
+        if exp["manifold"] == "torus":
+            x = rng.uniform(size=(200, exp["candidates"].shape[1]))
+            inv_err = max(np.max(np.abs(f(apply_permutation(x, g)) - f(x)))
+                          for g in group)
+        else:
+            x = rng.standard_normal((200, 3))
+            x /= np.linalg.norm(x, axis=1, keepdims=True)
+            inv_err = max(np.max(np.abs(f(apply_rotation(x, g)) - f(x)))
+                          for g in group)
+        check(f"needle target invariance ({name})", inv_err, 1e-8)
+
+        # The global max over the candidate set should be within a
+        # lengthscale of the needle orbit, and above the smooth max.
+        cands = exp["candidates"]
+        x_best = cands[np.argmax(f(cands))]
+        orbit = exp["needle_orbit"]
+        if exp["manifold"] == "torus":
+            diff = x_best[None, :] - orbit
+            dist = np.min(np.sqrt(np.sum((diff - np.round(diff))**2, axis=1)))
+            tol = 0.15
+        else:
+            dist = np.min(np.arccos(np.clip(orbit @ x_best, -1.0, 1.0)))
+            tol = 0.3
+        check(f"needle optimum on hidden orbit ({name})", dist, tol)
+
+
 if __name__ == "__main__":
     test_poisson_summation()
     test_torus_target_invariance_and_norm()
@@ -159,4 +194,5 @@ if __name__ == "__main__":
     test_sphere_target_invariance()
     test_sphere_kernel_psd_and_diag()
     test_sphere_norm_consistency()
+    test_needle_targets()
     print("\nAll exactness checks passed.")

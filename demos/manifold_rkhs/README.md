@@ -59,6 +59,31 @@ comparing the vanilla kernel against the orbit-averaged kernel. 10 repeats,
 | `sphere_C5` | S² | z-rotations C₅ | 5 | 676 | 150 |
 | `sphere_oct` | S² | octahedral rotations | 24 | 676 | 150 |
 
+Each experiment also has a `*_needle` variant (same group, budget and smooth
+component; see below).
+
+## Planted needle variants
+
+A caveat of the plain construction: the unnormalised orbit-averaged prior has
+inflated variance on the group's fixed-point sets (orbit phases add coherently
+there), so on the torus the drawn optima land exactly on the symmetry loci.
+The `*_needle` variants remove this degeneracy by adding a G-symmetrised
+truncated-spectrum kernel atom at a hidden *generic* orbit (rejection-sampled
+at least ~a lengthscale away from every fixed-point set):
+
+```
+f = f_smooth + β · (1/|G|) Σ_g k_M(g x₀, ·),
+```
+
+scaled so the needle peak sits 0.5 above the smooth component's maximum. The
+needle lives in the same truncated Fourier/harmonic frame, so exact RKHS
+membership and the closed-form norm carry over unchanged (the norm is just
+`Σ|c_m|²/λ_m` over the combined coefficients, cross terms included). These
+are the strongest rebuttal to the recoverability criticism: the global
+optimum is a localised feature at a hidden generic orbit, invisible to the
+surrogate until sampled within a lengthscale of one of its |G| copies. The
+needle orbit is marked with × on the target plots.
+
 Note the active-mode counts: 625–2197 versus the original 64–512 atoms, and —
 unlike atoms at sampleable locations — there is no set of input points whose
 observation linearly determines the target with fewer samples than modes.

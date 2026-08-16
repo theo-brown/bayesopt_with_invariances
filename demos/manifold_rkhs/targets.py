@@ -38,7 +38,8 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.polynomial.legendre import leggauss
 
-from kernels import matern_spectral_density, NU
+from groups import apply_permutation
+from kernels import matern_spectral_density, sphere_matern_coeffs, NU
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +97,28 @@ def make_torus_target(d: int, lengthscale: float, max_freq: int,
     ct = np.mean([np.transpose(ct, axes=perm) for perm in group], axis=0)
 
     return TorusTarget(modes=modes, coeffs=ct.ravel(), lambdas=lambdas)
+
+
+def torus_needle_coeffs(modes: np.ndarray, lengthscale: float,
+                        x0: np.ndarray,
+                        group: list[tuple[int, ...]]) -> np.ndarray:
+    """Fourier coefficients of a G-symmetrised truncated-spectrum kernel atom
+    centred on the orbit of x0 (unit amplitude; scale externally):
+
+        g(x) = (1/|G|) sum_s k_M(s x0, x),
+        k_M(y, x) = sum_{|m| <= M} S(m) exp(2*pi*i m.(x - y)).
+
+    Adding beta * g to a target keeps it exactly in the RKHS with the norm
+    still given by sum |c_m|^2 / lambda_m over the combined coefficients.
+    """
+    d = modes.shape[1]
+    lam_needle = matern_spectral_density(modes, lengthscale, d, NU)
+    phases = np.mean([
+        np.exp(-2.0j * np.pi *
+               (modes @ apply_permutation(x0[None, :], g)[0]))
+        for g in group
+    ], axis=0)
+    return lam_needle * phases
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +191,18 @@ class SphereTarget:
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         return real_sph_harm_basis(np.atleast_2d(x), self.max_degree) @ self.coeffs
+
+
+def sphere_needle_coeffs(max_degree: int, kappa: float, x0: np.ndarray,
+                         group: list[np.ndarray]) -> np.ndarray:
+    """Real-harmonic coefficients of a G-symmetrised truncated-spectrum
+    zonal atom centred on the orbit of x0 (unit amplitude; scale externally).
+    By the addition theorem, k'(y, x) = sum_{lj} a'_l Y_lj(y) Y_lj(x)."""
+    a_needle = sphere_matern_coeffs(max_degree, kappa)
+    degs = sph_harm_degrees(max_degree)
+    orbit = np.stack([g @ x0 for g in group])
+    basis = real_sph_harm_basis(orbit, max_degree)
+    return a_needle[degs] * basis.mean(axis=0)
 
 
 def make_sphere_target(max_degree: int, per_degree: np.ndarray,

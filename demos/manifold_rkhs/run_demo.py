@@ -27,11 +27,14 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 from scipy.stats import qmc
 
-from groups import (cyclic_permutation_group, cyclic_rotation_group,
-                    octahedral_rotation_group, permutation_group)
+from groups import (apply_permutation, cyclic_permutation_group,
+                    cyclic_rotation_group, octahedral_rotation_group,
+                    permutation_group)
 from kernels import OrbitAveragedKernel, SphereMatern, WrappedMatern52
 from mvr import run_mvr
-from targets import make_sphere_target, make_torus_target
+from targets import (SphereTarget, TorusTarget, make_sphere_target,
+                     make_torus_target, sphere_needle_coeffs,
+                     torus_needle_coeffs)
 
 # ---------------------------------------------------------------------------
 # Style (light mode; palette from the validated reference instance)
@@ -95,6 +98,8 @@ NOISE_SD = 0.05
 
 
 def build_experiment(name: str) -> dict:
+    if name.endswith("_needle"):
+        return with_needle(build_experiment(name[:-len("_needle")]))
     if name == "torus2_S2":
         d, l, max_freq = 2, 0.12, 12
         group = permutation_group(d)
@@ -131,6 +136,82 @@ def build_experiment(name: str) -> dict:
     return dict(name=name, manifold="torus", label=label, group=group,
                 base=base, target=target, candidates=cands, n_iter=n_iter,
                 n_modes=(2 * max_freq + 1) ** d)
+
+
+# ---------------------------------------------------------------------------
+# Planted needle: a symmetrised truncated-spectrum kernel atom at a hidden
+# generic orbit, scaled so the needle peak sits `margin` above the smooth
+# field's maximum. Exact RKHS membership and closed-form norms carry over
+# because the needle lives in the same truncated Fourier/harmonic frame.
+# ---------------------------------------------------------------------------
+
+NEEDLE_MARGIN = 0.5
+
+
+def _wrap(a):
+    return a - np.round(a)
+
+
+def generic_torus_point(d: int, rng, min_sep: float = 0.15) -> np.ndarray:
+    """Rejection-sample a point at least min_sep from every fixed-point set
+    (planes x_i = x_j) of coordinate-permutation groups."""
+    while True:
+        x = rng.uniform(size=d)
+        seps = [abs(_wrap(x[i] - x[j])) for i in range(d)
+                for j in range(i + 1, d)]
+        if min(seps) >= min_sep:
+            return x
+
+
+def generic_sphere_point(axes: list[np.ndarray], rng,
+                         min_angle: float = 0.35) -> np.ndarray:
+    """Rejection-sample a unit vector at least min_angle (radians) from
+    every rotation axis of the group."""
+    while True:
+        x = rng.standard_normal(3)
+        x /= np.linalg.norm(x)
+        if all(np.arccos(np.clip(abs(x @ ax), -1.0, 1.0)) >= min_angle
+               for ax in axes):
+            return x
+
+
+def with_needle(exp: dict, margin: float = NEEDLE_MARGIN) -> dict:
+    rng = np.random.default_rng(300)
+    target, cands, group = exp["target"], exp["candidates"], exp["group"]
+    smooth_max = float(np.max(target(cands)))
+
+    if exp["manifold"] == "torus":
+        d = cands.shape[1]
+        x0 = generic_torus_point(d, rng)
+        c_n = torus_needle_coeffs(target.modes, exp["base"].lengthscale, x0,
+                                  group)
+        needle = TorusTarget(target.modes, c_n, target.lambdas)
+        beta = (smooth_max + margin - target(x0[None])[0]) / needle(x0[None])[0]
+        new_target = TorusTarget(target.modes, target.coeffs + beta * c_n,
+                                 target.lambdas)
+        orbit = np.stack([apply_permutation(x0[None], g)[0] for g in group])
+    else:
+        if "C_5" in exp["label"]:
+            axes = [np.array([0.0, 0.0, 1.0])]
+        else:
+            axes = [np.eye(3)[i] for i in range(3)]
+            axes += [np.array(s) / np.sqrt(3.0) for s in
+                     [(1, 1, 1), (1, 1, -1), (1, -1, 1), (-1, 1, 1)]]
+            axes += [np.array(a) / np.sqrt(2.0) for a in
+                     [(1, 1, 0), (1, -1, 0), (1, 0, 1), (1, 0, -1),
+                      (0, 1, 1), (0, 1, -1)]]
+        x0 = generic_sphere_point(axes, rng)
+        c_n = sphere_needle_coeffs(target.max_degree, exp["base"].kappa, x0,
+                                   group)
+        needle = SphereTarget(target.max_degree, c_n, target.per_degree)
+        beta = (smooth_max + margin - target(x0[None])[0]) / needle(x0[None])[0]
+        new_target = SphereTarget(target.max_degree,
+                                  target.coeffs + beta * c_n,
+                                  target.per_degree)
+        orbit = np.stack([g @ x0 for g in group])
+
+    return dict(exp, name=exp["name"] + "_needle", target=new_target,
+                needle_orbit=orbit, label=exp["label"] + " $+$ needle")
 
 
 def run_experiment(exp: dict) -> dict:
@@ -179,6 +260,16 @@ def plot_target_torus(ax, exp):
     im = ax.pcolormesh(g1, g2, vals, cmap=DIVERGING, shading="auto",
                        norm=TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax),
                        rasterized=True)
+    orbit = exp.get("needle_orbit")
+    if orbit is not None:
+        if d == 3:  # only orbit points lying in the plotted slice
+            in_slice = np.abs(orbit[:, 2] - np.round(orbit[:, 2] - x_star[2])
+                              - x_star[2]) < 0.02
+            orbit = orbit[in_slice]
+        ax.scatter(orbit[:, 0] % 1.0, orbit[:, 1] % 1.0, marker="x", s=45,
+                   color=TEXT, linewidths=1.4, label="needle orbit")
+        ax.legend(frameon=False, fontsize=8, loc="upper right",
+                  labelcolor=TEXT_2)
     ax.set_xlabel("$x_1$")
     ax.set_ylabel("$x_2$")
     ax.set_title(f"Target{note}", fontsize=11, color=TEXT)
@@ -199,6 +290,14 @@ def plot_target_sphere(ax, exp):
     im = ax.pcolormesh(LON, LAT, vals, cmap=DIVERGING, shading="auto",
                        norm=TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax),
                        rasterized=True)
+    orbit = exp.get("needle_orbit")
+    if orbit is not None:
+        ax.scatter(np.arctan2(orbit[:, 1], orbit[:, 0]),
+                   np.arcsin(np.clip(orbit[:, 2], -1.0, 1.0)),
+                   marker="x", s=45, color=TEXT, linewidths=1.4,
+                   label="needle orbit")
+        ax.legend(frameon=False, fontsize=8, loc="lower right",
+                  labelcolor=TEXT_2)
     ax.set_title("Target (Mollweide)", fontsize=11, color=TEXT)
     ax.grid(True, color=GRID, linewidth=0.5, alpha=0.6)
     ax.tick_params(labelsize=7, colors=TEXT_2)
@@ -267,7 +366,9 @@ def make_figure(exp, results, path):
 # ---------------------------------------------------------------------------
 
 ALL_EXPERIMENTS = ["torus2_S2", "torus3_C3", "torus3_S3", "sphere_C5",
-                   "sphere_oct"]
+                   "sphere_oct",
+                   "torus2_S2_needle", "torus3_C3_needle", "torus3_S3_needle",
+                   "sphere_C5_needle", "sphere_oct_needle"]
 
 
 def main():
