@@ -66,12 +66,17 @@ class TorusTarget:
 
 
 def make_torus_target(d: int, lengthscale: float, max_freq: int,
-                      group: list[tuple[int, ...]], seed: int) -> TorusTarget:
+                      group: list[tuple[int, ...]], seed: int,
+                      norm: float | None = None) -> TorusTarget:
     """Draw a G-invariant truncated KL sample on T^d.
 
     `group` is a list of coordinate permutations (see groups.py). The
     coefficient tensor is averaged over the corresponding permutations of the
     frequency axes, which projects the draw onto the invariant subspace.
+
+    If `norm` is given, the coefficients are rescaled (after the invariance
+    projection) so the target's RKHS norm is exactly `norm`; rescaling is a
+    scalar multiple, so exact RKHS membership and invariance are preserved.
     """
     rng = np.random.default_rng(seed)
     M = max_freq
@@ -96,7 +101,12 @@ def make_torus_target(d: int, lengthscale: float, max_freq: int,
     # axis permutation is immaterial.)
     ct = np.mean([np.transpose(ct, axes=perm) for perm in group], axis=0)
 
-    return TorusTarget(modes=modes, coeffs=ct.ravel(), lambdas=lambdas)
+    target = TorusTarget(modes=modes, coeffs=ct.ravel(), lambdas=lambdas)
+    if norm is not None:
+        target = TorusTarget(modes=modes,
+                             coeffs=target.coeffs * (norm / target.rkhs_norm),
+                             lambdas=lambdas)
+    return target
 
 
 def torus_needle_coeffs(modes: np.ndarray, lengthscale: float,
@@ -206,8 +216,13 @@ def sphere_needle_coeffs(max_degree: int, kappa: float, x0: np.ndarray,
 
 
 def make_sphere_target(max_degree: int, per_degree: np.ndarray,
-                       group: list[np.ndarray], seed: int) -> SphereTarget:
-    """Draw a G-invariant band-limited sample on S^2 with exact norm."""
+                       group: list[np.ndarray], seed: int,
+                       norm: float | None = None) -> SphereTarget:
+    """Draw a G-invariant band-limited sample on S^2 with exact norm.
+
+    If `norm` is given, the coefficients are rescaled (after the invariance
+    projection) so the target's RKHS norm is exactly `norm`.
+    """
     rng = np.random.default_rng(seed)
     degs = sph_harm_degrees(max_degree)
     c = np.sqrt(per_degree[degs]) * rng.standard_normal(degs.size)
@@ -221,5 +236,10 @@ def make_sphere_target(max_degree: int, per_degree: np.ndarray,
     # ...then re-expand. Exact because the average is band-limited at L.
     c_inv = basis.T @ (w * vals)
 
-    return SphereTarget(max_degree=max_degree, coeffs=c_inv,
-                        per_degree=per_degree)
+    target = SphereTarget(max_degree=max_degree, coeffs=c_inv,
+                          per_degree=per_degree)
+    if norm is not None:
+        target = SphereTarget(max_degree=max_degree,
+                              coeffs=c_inv * (norm / target.rkhs_norm),
+                              per_degree=per_degree)
+    return target

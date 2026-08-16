@@ -10,9 +10,12 @@ the plain orbit-averaged (invariant) kernel:
   sphere_oct  : S^2, octahedral rotation group        (|G| = 24)
 
 Targets are G-invariant, exactly in the RKHS, with exactly known norm, and
-have far more active modes than the BO budget. Usage:
+have far more active modes than the BO budget. Regret curves are averaged
+over N_WORLDS independently drawn targets ("worlds") x N_REPEATS BO repeats;
+each world's smooth target is rescaled to the experiment's fixed reference
+norm B_REF. Usage:
 
-    python run_demo.py            # run everything (~10-20 min)
+    python run_demo.py            # run everything (~30-60 min)
     python run_demo.py torus2_S2  # run a single experiment
 """
 
@@ -92,14 +95,32 @@ def fibonacci_sphere(n: int) -> np.ndarray:
 # Experiment definitions
 # ---------------------------------------------------------------------------
 
-N_REPEATS = 10
+N_WORLDS = 5    # independently drawn objective functions per experiment
+N_REPEATS = 4   # BO repeats per world (N_WORLDS * N_REPEATS runs per kernel)
 N_INIT = 5
 NOISE_SD = 0.05
 
+# Fixed per-experiment reference norm: every world's smooth target is rescaled
+# to exactly this RKHS norm, so worlds differ only in the random draw (and, for
+# needle variants, the needle location). Round numbers near the seed-100 norms.
+B_REF = {
+    "torus2_S2": 12.0,
+    "torus3_C3": 19.0,
+    "torus3_S3": 15.0,
+    "sphere_C5": 12.0,
+    "sphere_oct": 6.0,
+}
 
-def build_experiment(name: str) -> dict:
+
+def build_experiment(name: str, world: int = 0) -> dict:
+    """Build one world of an experiment: the smooth target seed and the needle
+    location vary with `world`; candidates, kernels, budgets and groups are
+    identical across worlds, and the smooth component's RKHS norm is rescaled
+    to the fixed reference B_REF[name]."""
     if name.endswith("_needle"):
-        return with_needle(build_experiment(name[:-len("_needle")]))
+        return with_needle(build_experiment(name[:-len("_needle")], world),
+                           world=world)
+    seed = 100 + 17 * world
     if name == "torus2_S2":
         d, l, max_freq = 2, 0.12, 12
         group = permutation_group(d)
@@ -122,20 +143,22 @@ def build_experiment(name: str) -> dict:
         label = ("$S^2$, cyclic rotations $C_5$" if name == "sphere_C5"
                  else "$S^2$, octahedral rotation group $O$")
         base = SphereMatern(max_degree=max_degree, kappa=kappa)
-        target = make_sphere_target(max_degree, base.coeffs, group, seed=100)
+        target = make_sphere_target(max_degree, base.coeffs, group, seed=seed,
+                                    norm=B_REF[name])
         cands = fibonacci_sphere(4096)
         return dict(name=name, manifold="sphere", label=label, group=group,
                     base=base, target=target, candidates=cands, n_iter=150,
-                    n_modes=(max_degree + 1) ** 2)
+                    n_modes=(max_degree + 1) ** 2, b_ref=B_REF[name])
     else:
         raise ValueError(name)
 
     base = WrappedMatern52(d=d, lengthscale=l)
-    target = make_torus_target(d, l, max_freq, group, seed=100)
+    target = make_torus_target(d, l, max_freq, group, seed=seed,
+                               norm=B_REF[name])
     cands = sobol_candidates(d, n_cand, seed=200)
     return dict(name=name, manifold="torus", label=label, group=group,
                 base=base, target=target, candidates=cands, n_iter=n_iter,
-                n_modes=(2 * max_freq + 1) ** d)
+                n_modes=(2 * max_freq + 1) ** d, b_ref=B_REF[name])
 
 
 # ---------------------------------------------------------------------------
@@ -175,8 +198,9 @@ def generic_sphere_point(axes: list[np.ndarray], rng,
             return x
 
 
-def with_needle(exp: dict, margin: float = NEEDLE_MARGIN) -> dict:
-    rng = np.random.default_rng(300)
+def with_needle(exp: dict, world: int = 0,
+                margin: float = NEEDLE_MARGIN) -> dict:
+    rng = np.random.default_rng(300 + world)
     target, cands, group = exp["target"], exp["candidates"], exp["group"]
     smooth_max = float(np.max(target(cands)))
 
@@ -214,29 +238,54 @@ def with_needle(exp: dict, margin: float = NEEDLE_MARGIN) -> dict:
                 needle_orbit=orbit, label=exp["label"] + " $+$ needle")
 
 
-def run_experiment(exp: dict) -> dict:
-    action = "permutation" if exp["manifold"] == "torus" else "rotation"
-    kernels = {
-        "vanilla": exp["base"],
-        "invariant": OrbitAveragedKernel(exp["base"], exp["group"], action),
-    }
-    f_cand = exp["target"](exp["candidates"])
-    results = {}
-    for kname, kern in kernels.items():
-        t0 = time.time()
-        runs = [
-            run_mvr(kern, f_cand, exp["candidates"], N_INIT, exp["n_iter"],
-                    NOISE_SD, seed=1000 + rep)
-            for rep in range(N_REPEATS)
-        ]
-        results[kname] = {
-            "regret": np.stack([r["regret"] for r in runs]),
-            "max_sd": np.stack([r["max_sd"] for r in runs]),
+def run_experiment(name: str) -> tuple[dict, dict]:
+    """Run all worlds x repeats for one experiment.
+
+    Every world shares the group, candidates, kernels and budget, and its
+    smooth component is rescaled to the same reference norm B_REF; what varies
+    per world is the target draw (and, for needle variants, the needle
+    location). All N_WORLDS * N_REPEATS regret traces per kernel are pooled.
+    The regret certificate 2 B sup_x sigma_t is stored per run, computed with
+    that run's world's *exact* norm B (which varies slightly across worlds for
+    needle targets).
+
+    Returns (exp, results) where exp is the world-0 experiment dict (used for
+    the target plot), augmented with the mean total norm across worlds.
+    """
+    exp0 = None
+    traces = {k: {"regret": [], "cert": []} for k in ("vanilla", "invariant")}
+    norms = []
+    for w in range(N_WORLDS):
+        exp = build_experiment(name, world=w)
+        if w == 0:
+            exp0 = exp
+        action = "permutation" if exp["manifold"] == "torus" else "rotation"
+        kernels = {
+            "vanilla": exp["base"],
+            "invariant": OrbitAveragedKernel(exp["base"], exp["group"],
+                                             action),
         }
-        print(f"  {exp['name']} / {kname}: {time.time() - t0:.1f}s, "
-              f"final mean regret "
-              f"{np.mean(results[kname]['regret'][:, -1]):.4f}", flush=True)
-    return results
+        B_world = exp["target"].rkhs_norm
+        norms.append(B_world)
+        f_cand = exp["target"](exp["candidates"])
+        for kname, kern in kernels.items():
+            t0 = time.time()
+            runs = [
+                run_mvr(kern, f_cand, exp["candidates"], N_INIT,
+                        exp["n_iter"], NOISE_SD, seed=1000 + 100 * w + rep)
+                for rep in range(N_REPEATS)
+            ]
+            traces[kname]["regret"].extend(r["regret"] for r in runs)
+            traces[kname]["cert"].extend(2.0 * B_world * r["max_sd"]
+                                         for r in runs)
+            print(f"  {name} / world {w} / {kname}: "
+                  f"{time.time() - t0:.1f}s, final mean regret "
+                  f"{np.mean([r['regret'][-1] for r in runs]):.4f}",
+                  flush=True)
+    results = {kname: {key: np.stack(arrs) for key, arrs in tr.items()}
+               for kname, tr in traces.items()}
+    exp0["mean_norm"] = float(np.mean(norms))
+    return exp0, results
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +326,7 @@ def plot_target_torus(ax, exp):
                   labelcolor=TEXT_2)
     ax.set_xlabel("$x_1$")
     ax.set_ylabel("$x_2$")
-    ax.set_title(f"Target{note}", fontsize=11, color=TEXT)
+    ax.set_title(f"Target, world 0{note}", fontsize=11, color=TEXT)
     ax.set_aspect("equal")
     return im
 
@@ -303,7 +352,7 @@ def plot_target_sphere(ax, exp):
                    label="needle orbit")
         ax.legend(frameon=False, fontsize=8, loc="lower right",
                   labelcolor=TEXT_2)
-    ax.set_title("Target (Mollweide)", fontsize=11, color=TEXT)
+    ax.set_title("Target, world 0 (Mollweide)", fontsize=11, color=TEXT)
     ax.grid(True, color=GRID, linewidth=0.5, alpha=0.6)
     ax.tick_params(labelsize=7, colors=TEXT_2)
     return im
@@ -340,7 +389,6 @@ def plot_theory_rate(ax, exp, results, n_obs):
 
 def plot_regret(ax, exp, results):
     n_obs = N_INIT + np.arange(exp["n_iter"])
-    B = exp["target"].rkhs_norm
     clipped = False
     max_mean_regret = 0.0
     for kname, label in [("vanilla", "Vanilla kernel"),
@@ -360,8 +408,9 @@ def plot_regret(ax, exp, results):
                     xytext=(6, 0), textcoords="offset points",
                     color=color, fontsize=9, va="center")
         # Non-asymptotic certificate: r_t <= 2 B sup_x sigma_t(x), valid
-        # because the target's RKHS norm B is exactly known.
-        cert = 2.0 * B * np.mean(results[kname]["max_sd"], axis=0)
+        # because each world's RKHS norm B is exactly known; the stored cert
+        # traces already use their own world's exact B.
+        cert = np.mean(results[kname]["cert"], axis=0)
         ax.plot(n_obs, cert, color=color, linestyle=":", linewidth=1.4,
                 alpha=0.65, label="$2B\\sup_x \\sigma_t$ (bound)")
     plot_theory_rate(ax, exp, results, n_obs)
@@ -371,7 +420,8 @@ def plot_regret(ax, exp, results):
     ax.set_ylim(top=4.0 * max_mean_regret)
     ax.set_xlabel("Observations")
     ax.set_ylabel("Simple regret")
-    ax.set_title(f"MVR, mean $\\pm$ s.e. over {N_REPEATS} runs",
+    ax.set_title(f"MVR, mean $\\pm$ s.e. over {N_WORLDS} worlds "
+                 f"$\\times$ {N_REPEATS} repeats",
                  fontsize=11, color=TEXT)
     ax.legend(frameon=False, fontsize=9, loc="lower left")
     style_axes(ax)
@@ -395,10 +445,16 @@ def make_figure(exp, results, path):
                  "curves at the axis floor reached regret 0 "
                  "(exact optimum on the candidate set)",
                  ha="right", fontsize=8, color=TEXT_2)
+    if exp["name"].endswith("_needle"):
+        # Total norm varies slightly across worlds (the smooth component is
+        # fixed at B_REF; needle scale and cross terms depend on the world).
+        norm_txt = (f"mean $\\|f\\|_{{H_k}}$ = "
+                    f"{exp.get('mean_norm', exp['target'].rkhs_norm):.2f}")
+    else:
+        norm_txt = f"$\\|f\\|_{{H_k}}$ = {exp['b_ref']:.2f}"
     fig.suptitle(
         f"{exp['label']}  —  |G| = {len(exp['group'])},  "
-        f"{exp['n_modes']} active modes,  "
-        f"$\\|f\\|_{{H_k}}$ = {exp['target'].rkhs_norm:.2f}",
+        f"{exp['n_modes']} active modes,  {norm_txt}",
         fontsize=12, color=TEXT)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(path, dpi=160)
@@ -418,10 +474,9 @@ def main():
     names = sys.argv[1:] or ALL_EXPERIMENTS
     for name in names:
         print(f"[{name}]", flush=True)
-        exp = build_experiment(name)
+        exp, results = run_experiment(name)
         print(f"  target: {exp['n_modes']} modes, "
-              f"||f||_H = {exp['target'].rkhs_norm:.3f}", flush=True)
-        results = run_experiment(exp)
+              f"mean ||f||_H over worlds = {exp['mean_norm']:.3f}", flush=True)
         np.savez(f"results/{name}.npz",
                  **{f"{kname}_{key}": arr
                     for kname, traces in results.items()

@@ -48,8 +48,16 @@ other tricks are used.**
 
 Each experiment runs MVR (query = argmax posterior variance on a large
 candidate set; incumbent = argmax posterior mean) with known hyperparameters,
-comparing the vanilla kernel against the orbit-averaged kernel. 10 repeats,
-5 random initial points, observation noise σ = 0.05.
+comparing the vanilla kernel against the orbit-averaged kernel. Regret curves
+are averaged over **5 independently drawn targets ("worlds")** — for needle
+variants the hidden needle placement is also re-drawn per world — **× 4 BO
+repeats** per world (20 runs per kernel), with 5 random initial points and
+observation noise σ = 0.05, so the comparison is not tied to one particular
+target draw. Every world shares the experiment's group, candidate set,
+kernels and budget, and each world's smooth target is rescaled to the
+experiment's fixed reference norm `B_REF` (12, 19, 15, 12 and 6 for the five
+experiments below), so all worlds are exactly equally "hard" in RKHS-norm
+terms. The plotted target panel shows world 0.
 
 | Name | Manifold | Group | \|G\| | Active modes | Budget |
 |------|----------|-------|------|--------------|--------|
@@ -78,7 +86,11 @@ f = f_smooth + β · (1/|G|) Σ_g k_M(g x₀, ·),
 scaled so the needle peak sits 0.5 above the smooth component's maximum. The
 needle lives in the same truncated Fourier/harmonic frame, so exact RKHS
 membership and the closed-form norm carry over unchanged (the norm is just
-`Σ|c_m|²/λ_m` over the combined coefficients, cross terms included). These
+`Σ|c_m|²/λ_m` over the combined coefficients, cross terms included). The
+needle location is re-drawn for every world, so the *total* norm of a needle
+target varies slightly across worlds — the smooth component's norm is what is
+held exactly fixed at `B_REF` — and the figure suptitle reports the mean total
+norm over worlds. These
 are the strongest rebuttal to the recoverability criticism: the global
 optimum is a localised feature at a hidden generic orbit, invisible to the
 surrogate until sampled within a lengthscale of one of its |G| copies. The
@@ -112,9 +124,12 @@ r_t ≤ 2 B max_x σ_t(x)
 ```
 
 over the candidate set. The MVR loop already computes the posterior variance
-at every candidate each iteration, so the certificate costs nothing extra; it
-is logged (`max_sd` in the saved results) and drawn as a dotted curve in the
-regret panels. This is only possible here because `B` is exactly known — with
+at every candidate each iteration, so the certificate costs nothing extra;
+each run's certificate trace is computed with its own world's exact norm `B`
+(which varies slightly across worlds for needle targets), stored per run
+(`*_cert` in the saved results) and drawn — averaged over runs — as a dotted
+curve in the regret panels. This is only possible here because `B` is exactly
+known — with
 an estimated or bounded norm the certificate would be heuristic. Being a true
 worst-case-over-the-RKHS-ball bound, it necessarily sits well above the
 typical-case empirical regret; the point is that it decays and is *rigorous*,
@@ -137,7 +152,7 @@ holding for every run rather than on average.
 ```bash
 pip install numpy scipy matplotlib
 python test_exactness.py   # verify the construction (~30 s)
-python run_demo.py         # all experiments (~10–20 min)
+python run_demo.py         # all experiments (~30–60 min)
 python run_demo.py sphere_oct   # or a single one
 ```
 
