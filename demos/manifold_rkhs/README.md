@@ -48,7 +48,15 @@ other tricks are used.**
 
 Each experiment runs MVR (query = argmax posterior variance on a large
 candidate set; incumbent = argmax posterior mean) with known hyperparameters,
-comparing the vanilla kernel against the orbit-averaged kernel. Regret curves
+comparing three kernels: the **vanilla** kernel, the plain **orbit-averaged**
+kernel, and the **normalised orbit-averaged** kernel
+`k_G(x,y)/√(k_G(x,x)k_G(y,y))` (the diagonal renormalisation advocated by
+Bardou et al., 2025). The normalised kernel has unit prior variance
+everywhere, which removes the fixed-point variance inflation of the plain
+orbit average — MVR's variance-greedy queries are then no longer drawn
+towards the symmetry loci. Note the trade-off: the targets' RKHS norm is
+exactly known in `H_{k_G}`, *not* in the normalised kernel's RKHS, so the
+regret certificate (below) exists only for the two plain arms. Regret curves
 are averaged over **5 independently drawn targets ("worlds")** — for needle
 variants the hidden needle placement is also re-drawn per world — **× 4 BO
 repeats** per world (20 runs per kernel), with 5 random initial points and
@@ -110,9 +118,10 @@ T^{-ν/(2ν+m)})`. The constants and polylog factors are unspecified, but they
 are *shared* between the vanilla (|G| = 1) and invariant kernels, so the
 constant-free comparison is the **ratio** of mean simple regrets: the theory
 predicts `r_vanilla / r_invariant ≈ √|G|`. `plots/ratio_summary.png` plots
-this empirical ratio for every experiment against its dashed `√|G|` level.
-Being an upper-bound prediction, the empirical ratios may — and mostly do —
-sit well above it.
+this empirical ratio for every experiment against its dashed `√|G|` level
+(solid = plain orbit average, dash-dot = normalised orbit average). Being an
+upper-bound prediction, the empirical ratios may — and mostly do — sit well
+above it.
 
 ### Non-asymptotic regret certificate
 

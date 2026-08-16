@@ -33,7 +33,8 @@ from scipy.stats import qmc
 from groups import (apply_permutation, cyclic_permutation_group,
                     cyclic_rotation_group, octahedral_rotation_group,
                     permutation_group)
-from kernels import OrbitAveragedKernel, SphereMatern, WrappedMatern52
+from kernels import (NormalizedKernel, OrbitAveragedKernel, SphereMatern,
+                     WrappedMatern52)
 from mvr import run_mvr
 from targets import (SphereTarget, TorusTarget, make_sphere_target,
                      make_torus_target, sphere_needle_coeffs,
@@ -47,7 +48,8 @@ SURFACE = "#fcfcfb"
 TEXT = "#0b0b0b"
 TEXT_2 = "#52514e"
 GRID = "#e8e7e4"
-SERIES = {"vanilla": "#2a78d6", "invariant": "#eb6834"}
+SERIES = {"vanilla": "#2a78d6", "invariant": "#eb6834",
+          "normalized": "#1baf7a"}
 
 DIVERGING = LinearSegmentedColormap.from_list(
     "blue_gray_red",
@@ -253,17 +255,24 @@ def run_experiment(name: str) -> tuple[dict, dict]:
     the target plot), augmented with the mean total norm across worlds.
     """
     exp0 = None
-    traces = {k: {"regret": [], "cert": []} for k in ("vanilla", "invariant")}
+    traces = {"vanilla": {"regret": [], "cert": []},
+              "invariant": {"regret": [], "cert": []},
+              "normalized": {"regret": []}}
     norms = []
     for w in range(N_WORLDS):
         exp = build_experiment(name, world=w)
         if w == 0:
             exp0 = exp
         action = "permutation" if exp["manifold"] == "torus" else "rotation"
+        k_inv = OrbitAveragedKernel(exp["base"], exp["group"], action)
         kernels = {
             "vanilla": exp["base"],
-            "invariant": OrbitAveragedKernel(exp["base"], exp["group"],
-                                             action),
+            "invariant": k_inv,
+            # Diagonal renormalisation of the orbit average: flattens the
+            # prior variance, removing the fixed-point inflation. No exact-
+            # norm certificate exists for this arm (B is known in H_{k_G},
+            # not in the normalised kernel's RKHS).
+            "normalized": NormalizedKernel(k_inv),
         }
         B_world = exp["target"].rkhs_norm
         norms.append(B_world)
@@ -276,8 +285,9 @@ def run_experiment(name: str) -> tuple[dict, dict]:
                 for rep in range(N_REPEATS)
             ]
             traces[kname]["regret"].extend(r["regret"] for r in runs)
-            traces[kname]["cert"].extend(2.0 * B_world * r["max_sd"]
-                                         for r in runs)
+            if "cert" in traces[kname]:
+                traces[kname]["cert"].extend(2.0 * B_world * r["max_sd"]
+                                             for r in runs)
             print(f"  {name} / world {w} / {kname}: "
                   f"{time.time() - t0:.1f}s, final mean regret "
                   f"{np.mean([r['regret'][-1] for r in runs]):.4f}",
@@ -365,8 +375,12 @@ def plot_regret(ax, exp, results):
     n_obs = N_INIT + np.arange(exp["n_iter"])
     clipped = False
     max_mean_regret = 0.0
-    for kname, label in [("vanilla", "Vanilla kernel"),
-                         ("invariant", "Orbit-averaged kernel")]:
+    arms = [("vanilla", "Vanilla kernel"),
+            ("invariant", "Orbit-averaged kernel"),
+            ("normalized", "Normalised orbit-avg.")]
+    for kname, label in arms:
+        if kname not in results:
+            continue
         r = results[kname]["regret"]
         mean = np.mean(r, axis=0)
         stderr = np.std(r, axis=0, ddof=1) / np.sqrt(r.shape[0])
@@ -382,11 +396,12 @@ def plot_regret(ax, exp, results):
                     xytext=(6, 0), textcoords="offset points",
                     color=color, fontsize=9, va="center")
         # Non-asymptotic certificate: r_t <= 2 B sup_x sigma_t(x), valid
-        # because each world's RKHS norm B is exactly known; the stored cert
-        # traces already use their own world's exact B.
-        cert = np.mean(results[kname]["cert"], axis=0)
-        ax.plot(n_obs, cert, color=color, linestyle=":", linewidth=1.4,
-                alpha=0.65, label="$2B\\sup_x \\sigma_t$ (bound)")
+        # because each world's RKHS norm B is exactly known. Absent for the
+        # normalised arm (B is known in H_{k_G}, not in that kernel's RKHS).
+        if "cert" in results[kname]:
+            cert = np.mean(results[kname]["cert"], axis=0)
+            ax.plot(n_obs, cert, color=color, linestyle=":", linewidth=1.4,
+                    alpha=0.65, label="$2B\\sup_x \\sigma_t$ (bound)")
     ax.set_yscale("log")
     # The certificate starts near 2B, far above the empirical regret; cap
     # the axis so it enters the frame as it decays instead of stretching it.
@@ -471,6 +486,11 @@ def make_ratio_figure(path):
         ratio = mean_v / mean_i
         n_obs = N_INIT + np.arange(ratio.size)
         ax.plot(n_obs, ratio, color=color, linewidth=2)
+        if "normalized_regret" in data.files:
+            mean_n = np.maximum(np.mean(data["normalized_regret"], axis=0),
+                                REGRET_FLOOR)
+            ax.plot(n_obs, mean_v / mean_n, color=color, linewidth=1.6,
+                    linestyle=(0, (5, 1.5, 1, 1.5)), alpha=0.8)
         ax.axhline(np.sqrt(g_order), color=color, linestyle=(0, (4, 3)),
                    linewidth=1.2, alpha=0.55)
         ax.annotate(label, (n_obs[-1], ratio[-1]), xytext=(6, 0),
@@ -487,7 +507,11 @@ def make_ratio_figure(path):
                  "$\\sqrt{|G|}$ offset (dashed)", fontsize=11, color=TEXT)
     from matplotlib.lines import Line2D
     ax.legend(handles=[
-        Line2D([], [], color=TEXT_2, linewidth=2, label="empirical ratio"),
+        Line2D([], [], color=TEXT_2, linewidth=2,
+               label="vanilla / orbit-averaged"),
+        Line2D([], [], color=TEXT_2, linewidth=1.6,
+               linestyle=(0, (5, 1.5, 1, 1.5)),
+               label="vanilla / normalised orbit-avg."),
         Line2D([], [], color=TEXT_2, linestyle=(0, (4, 3)), linewidth=1.2,
                label="$\\sqrt{|G|}$ (theory, Thm 1)"),
     ], frameon=False, fontsize=9, loc="upper left")

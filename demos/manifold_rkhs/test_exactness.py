@@ -8,8 +8,9 @@ import numpy as np
 from groups import (cyclic_permutation_group, cyclic_rotation_group,
                     octahedral_rotation_group, permutation_group,
                     apply_permutation, apply_rotation)
-from kernels import (OrbitAveragedKernel, SphereMatern, WrappedMatern52,
-                     matern_spectral_density, sphere_matern_coeffs)
+from kernels import (NormalizedKernel, OrbitAveragedKernel, SphereMatern,
+                     WrappedMatern52, matern_spectral_density,
+                     sphere_matern_coeffs)
 from targets import (make_sphere_target, make_torus_target,
                      real_sph_harm_basis, sphere_quadrature)
 
@@ -150,6 +151,27 @@ def test_sphere_norm_consistency():
     check("sphere RKHS norm (interpolation)", rel, 1e-2)
 
 
+def test_normalized_kernel():
+    """Diagonal renormalisation: unit prior variance everywhere, still
+    G-invariant and PSD."""
+    d, l = 2, 0.12
+    group = permutation_group(d)
+    kg = OrbitAveragedKernel(WrappedMatern52(d=d, lengthscale=l),
+                             group, "permutation")
+    kn = NormalizedKernel(kg)
+    rng = np.random.default_rng(13)
+    x, y = rng.uniform(size=(60, d)), rng.uniform(size=(60, d))
+    check("normalised kernel unit diagonal",
+          np.max(np.abs(kn.elementwise(x, x) - 1.0)), 1e-12)
+    base = kn.pair(x, y)
+    err = max(np.max(np.abs(kn.pair(apply_permutation(x, g), y) - base))
+              for g in group)
+    check("normalised kernel invariance", err, 1e-10)
+    K = kn.pair(x, x)
+    check("normalised kernel PSD",
+          max(0.0, -np.min(np.linalg.eigvalsh(0.5 * (K + K.T)))), 1e-9)
+
+
 def test_needle_targets():
     """Needle-augmented targets: still exactly invariant, real-valued, and
     peaked on the hidden orbit."""
@@ -194,5 +216,6 @@ if __name__ == "__main__":
     test_sphere_target_invariance()
     test_sphere_kernel_psd_and_diag()
     test_sphere_norm_consistency()
+    test_normalized_kernel()
     test_needle_targets()
     print("\nAll exactness checks passed.")

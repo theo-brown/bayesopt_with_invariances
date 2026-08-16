@@ -158,6 +158,31 @@ class SphereMatern:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class NormalizedKernel:
+    """Diagonal renormalisation k(x,y) / sqrt(k(x,x) k(y,y)) (as advocated
+    by Bardou et al., 2025, for orbit-averaged kernels). Flattens the prior
+    variance to exactly 1 everywhere, removing the fixed-point variance
+    inflation of the plain orbit average.
+
+    Note: the benchmark targets' RKHS norm is exactly known in H_{k_G} (the
+    plain orbit-averaged kernel), NOT in the normalised kernel's RKHS, so no
+    exact-norm regret certificate is available for this arm."""
+
+    base: object
+
+    def _root_diag(self, x: np.ndarray) -> np.ndarray:
+        return np.sqrt(self.base.elementwise(x, x))
+
+    def pair(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return (self.base.pair(x, y)
+                / np.outer(self._root_diag(x), self._root_diag(y)))
+
+    def elementwise(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return (self.base.elementwise(x, y)
+                / (self._root_diag(x) * self._root_diag(y)))
+
+
+@dataclass
 class OrbitAveragedKernel:
     """Single-sided group average of a base kernel (equal to the double
     average for isometry groups). No renormalisation."""
