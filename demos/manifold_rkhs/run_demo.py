@@ -262,9 +262,10 @@ def plot_target_torus(ax, exp):
                        rasterized=True)
     orbit = exp.get("needle_orbit")
     if orbit is not None:
-        if d == 3:  # only orbit points lying in the plotted slice
-            in_slice = np.abs(orbit[:, 2] - np.round(orbit[:, 2] - x_star[2])
-                              - x_star[2]) < 0.02
+        if d == 3:  # only orbit points near the plotted slice (within half
+            # a lengthscale, since the needle has finite width)
+            dz = orbit[:, 2] - x_star[2]
+            in_slice = np.abs(dz - np.round(dz)) < 0.06
             orbit = orbit[in_slice]
         ax.scatter(orbit[:, 0] % 1.0, orbit[:, 1] % 1.0, marker="x", s=45,
                    color=TEXT, linewidths=1.4, label="needle orbit")
