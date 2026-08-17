@@ -162,11 +162,18 @@ holding for every run rather than on average.
 
 ## Run
 
+Both MVR and GP-UCB (`μ + 2σ`, β = 2 as in Brown et al. 2024, App. B.1) are
+supported; UCB artifacts carry a `ucb_` prefix (`results/ucb_*.npz`,
+`plots/ucb_*.png`). In both cases simple regret is measured for the incumbent
+argmax of the posterior mean, and the `2B sup σ` certificate remains valid —
+it holds for any query rule.
+
 ```bash
 pip install numpy scipy matplotlib
 python test_exactness.py   # verify the construction (~30 s)
-python run_demo.py         # all experiments (~30–60 min)
-python run_demo.py sphere_oct   # or a single one
+python run_demo.py         # all experiments with MVR (~30–60 min)
+python run_demo.py --algo ucb          # same suite with GP-UCB
+python run_demo.py sphere_oct_needle   # or a single one
 ```
 
 ## References

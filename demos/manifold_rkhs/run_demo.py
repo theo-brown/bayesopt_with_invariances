@@ -35,7 +35,7 @@ from groups import (apply_permutation, cyclic_permutation_group,
                     permutation_group)
 from kernels import (NormalizedKernel, OrbitAveragedKernel, SphereMatern,
                      WrappedMatern52)
-from mvr import run_mvr
+from mvr import run_bo
 from targets import (SphereTarget, TorusTarget, make_sphere_target,
                      make_torus_target, sphere_needle_coeffs,
                      torus_needle_coeffs)
@@ -240,7 +240,7 @@ def with_needle(exp: dict, world: int = 0,
                 needle_orbit=orbit, label=exp["label"] + " $+$ needle")
 
 
-def run_experiment(name: str) -> tuple[dict, dict]:
+def run_experiment(name: str, algo: str = "mvr") -> tuple[dict, dict]:
     """Run all worlds x repeats for one experiment.
 
     Every world shares the group, candidates, kernels and budget, and its
@@ -280,8 +280,9 @@ def run_experiment(name: str) -> tuple[dict, dict]:
         for kname, kern in kernels.items():
             t0 = time.time()
             runs = [
-                run_mvr(kern, f_cand, exp["candidates"], N_INIT,
-                        exp["n_iter"], NOISE_SD, seed=1000 + 100 * w + rep)
+                run_bo(kern, f_cand, exp["candidates"], N_INIT,
+                       exp["n_iter"], NOISE_SD, seed=1000 + 100 * w + rep,
+                       algo=algo)
                 for rep in range(N_REPEATS)
             ]
             traces[kname]["regret"].extend(r["regret"] for r in runs)
@@ -295,6 +296,7 @@ def run_experiment(name: str) -> tuple[dict, dict]:
     results = {kname: {key: np.stack(arrs) for key, arrs in tr.items()}
                for kname, tr in traces.items()}
     exp0["mean_norm"] = float(np.mean(norms))
+    exp0["algo"] = algo
     return exp0, results
 
 
@@ -408,7 +410,9 @@ def plot_regret(ax, exp, results):
     ax.set_ylim(top=4.0 * max_mean_regret)
     ax.set_xlabel("Observations")
     ax.set_ylabel("Simple regret")
-    ax.set_title(f"MVR, mean $\\pm$ s.e. over {N_WORLDS} worlds "
+    algo_label = ("GP-UCB ($\\beta = 2$)" if exp.get("algo") == "ucb"
+                  else "MVR")
+    ax.set_title(f"{algo_label}, mean $\\pm$ s.e. over {N_WORLDS} worlds "
                  f"$\\times$ {N_REPEATS} repeats",
                  fontsize=11, color=TEXT)
     ax.legend(frameon=False, fontsize=9, loc="lower left")
@@ -466,7 +470,7 @@ RATIO_SPEC = {
 }
 
 
-def make_ratio_figure(path):
+def make_ratio_figure(path, prefix="", algo_label="MVR"):
     """Constant-free comparison with the theory: the unknown constants and
     polylog factors in the Theorem 1 rate are shared between the two kernels,
     so the ratio of mean simple regrets r_vanilla / r_invariant is directly
@@ -475,7 +479,7 @@ def make_ratio_figure(path):
     fig, ax = plt.subplots(figsize=(7.5, 4.6))
     plotted = False
     for name, (label, g_order, color) in RATIO_SPEC.items():
-        f = f"results/{name}.npz"
+        f = f"results/{prefix}{name}.npz"
         if not os.path.exists(f):
             continue
         data = np.load(f)
@@ -503,7 +507,7 @@ def make_ratio_figure(path):
     ax.set_yscale("log")
     ax.set_xlabel("Observations")
     ax.set_ylabel("Simple-regret ratio, vanilla / invariant")
-    ax.set_title("Empirical regret ratio (solid) vs theoretical "
+    ax.set_title(f"{algo_label}: empirical regret ratio vs theoretical "
                  "$\\sqrt{|G|}$ offset (dashed)", fontsize=11, color=TEXT)
     from matplotlib.lines import Line2D
     ax.legend(handles=[
@@ -524,18 +528,27 @@ def make_ratio_figure(path):
 
 
 def main():
-    names = sys.argv[1:] or ALL_EXPERIMENTS
+    args = sys.argv[1:]
+    algo = "mvr"
+    if "--algo" in args:
+        i = args.index("--algo")
+        algo = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    prefix = "" if algo == "mvr" else f"{algo}_"
+    algo_label = "GP-UCB ($\\beta = 2$)" if algo == "ucb" else "MVR"
+    names = args or ALL_EXPERIMENTS
     for name in names:
-        print(f"[{name}]", flush=True)
-        exp, results = run_experiment(name)
+        print(f"[{prefix}{name}]", flush=True)
+        exp, results = run_experiment(name, algo=algo)
         print(f"  target: {exp['n_modes']} modes, "
               f"mean ||f||_H over worlds = {exp['mean_norm']:.3f}", flush=True)
-        np.savez(f"results/{name}.npz",
+        np.savez(f"results/{prefix}{name}.npz",
                  **{f"{kname}_{key}": arr
                     for kname, traces in results.items()
                     for key, arr in traces.items()})
-        make_figure(exp, results, f"plots/{name}.png")
-    make_ratio_figure("plots/ratio_summary.png")
+        make_figure(exp, results, f"plots/{prefix}{name}.png")
+    make_ratio_figure(f"plots/{prefix}ratio_summary.png", prefix=prefix,
+                      algo_label=algo_label)
 
 
 if __name__ == "__main__":

@@ -12,17 +12,25 @@ import numpy as np
 from scipy.linalg import cho_factor, cho_solve, solve_triangular
 
 
-def run_mvr(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
-            n_init: int, n_iter: int, noise_sd: float,
-            seed: int) -> dict:
-    """Run MVR and return per-iteration traces.
+def run_bo(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
+           n_init: int, n_iter: int, noise_sd: float, seed: int,
+           algo: str = "mvr", beta: float = 2.0) -> dict:
+    """Run a GP bandit algorithm and return per-iteration traces.
+
+    algo = "mvr": query the candidate with maximum posterior variance.
+    algo = "ucb": query the candidate maximising mu_t(x) + beta*sigma_t(x)
+                  (beta = 2.0, as in Brown et al. 2024, Appendix B.1).
+
+    In both cases the incumbent reported for simple regret is the argmax of
+    the posterior mean.
 
     Returns a dict with two length-n_iter arrays:
       "regret" : simple regret of the incumbent after each iteration
       "max_sd" : maximum posterior standard deviation over the candidate
                  set, sup_x sigma_t(x) — the quantity entering the
                  noise-free RKHS regret certificate r_t <= 2 B sup_x
-                 sigma_t(x) for targets with known RKHS norm B.
+                 sigma_t(x) for targets with known RKHS norm B. The
+                 certificate is valid for any query rule.
 
     Parameters
     ----------
@@ -59,11 +67,23 @@ def run_mvr(kernel, f_candidates: np.ndarray, candidates: np.ndarray,
         regret[t] = f_max - f_candidates[int(np.argmax(mean))]
         max_sd[t] = np.sqrt(np.max(var))
 
-        # MVR query: maximum posterior variance
-        nxt = int(np.argmax(var))
+        # Query rule
+        if algo == "mvr":
+            nxt = int(np.argmax(var))
+        elif algo == "ucb":
+            nxt = int(np.argmax(mean + beta * np.sqrt(var)))
+        else:
+            raise ValueError(algo)
         train_idx.append(nxt)
         k_tc = np.vstack([k_tc, kernel.pair(candidates[nxt][None, :],
                                             candidates)])
         y.append(f_candidates[nxt] + noise_sd * rng.standard_normal())
 
     return {"regret": regret, "max_sd": max_sd}
+
+
+def run_mvr(kernel, f_candidates, candidates, n_init, n_iter, noise_sd,
+            seed):
+    """Backwards-compatible wrapper for run_bo(algo="mvr")."""
+    return run_bo(kernel, f_candidates, candidates, n_init, n_iter, noise_sd,
+                  seed, algo="mvr")
